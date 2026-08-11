@@ -27,17 +27,25 @@
 ```
 PhenoCV/
 ├── .github/workflows/ci.yml      # pytest，无需 GPU
-├── src/phenocv/                  # 可 pip 安装的核心包
-│   ├── __init__.py
-│   ├── engine.py                 # 时序分割引擎（数据源无关）
-│   ├── cli.py                    # `phenocv` 命令行入口
-│   ├── config.py                 # 配置加载与预设
-│   ├── adapters/                 # 数据适配器
-│   │   ├── __init__.py
-│   │   ├── base.py               # 适配器基类
-│   │   ├── csv_manifest.py       # 通用 CSV/JSON manifest 适配器（默认）
-│   │   └── plant_phenotyping.py  # 植物表型示例适配器（大豆）
-│   └── utils/                    # 通用工具（ROI、mask IO、边界 F1 等）
+├── src/phenocv/                  # 可 pip 安装的核心包（可组合模块工具箱）
+│   ├── __init__.py / __main__.py # 工具箱入口；phenocv.list_modules()
+│   ├── cli.py                    # `phenocv` 命令行入口（segment|phenotype|list-traits）
+│   ├── core/                     # 所有模块共享的【基础】
+│   │   ├── registry.py           # TraitExtractor + @register + available_for
+│   │   └── io.py                 # mask/RGB/深度/多光谱 读取器
+│   ├── segmentation/             # 模块 1 —— 时序冠层分割（数据源无关）
+│   │   ├── engine.py             # 时序分割引擎（ROI/传播/阶梯/救援/LOO/ISAT）
+│   │   ├── config.py             # 配置加载与预设
+│   │   └── adapters/             # 数据适配器
+│   │       ├── __init__.py
+│   │       ├── base.py           # 适配器基类
+│   │       ├── csv_manifest.py   # 通用 CSV/JSON manifest 适配器（默认）
+│   │       └── plant_phenotyping.py  # 植物表型示例适配器（大豆）
+│   └── phenotypes/               # 模块 2 —— 四级表型引擎（CPU-only，无 torch）
+│       ├── base.py               # 对 phenocv.core.registry 的再导出
+│       ├── compute_traits.py     # 按层级编排、失败即留痕
+│       ├── shape2d.py / rgb_indices.py / geometry3d.py / multispectral.py
+│       └── calib.py              # 相机内参
 ├── configs/
 │   ├── default.yaml
 │   └── presets/
@@ -52,6 +60,8 @@ PhenoCV/
 │   └── adapter_guide.md
 ├── samples/                      # 真实数据不提交，仅放 README
 ├── tools/make_demo_sample.py     # 合成示例生成器
+├── tools/compute_phenotypes.py   # 批量表型计算（掩膜交付物 → traits_long.csv）
+├── skills/phenocv-phenotype-port/  # WorkBuddy 技能：把表型流水线移植进 PhenoCV
 ├── notebooks/
 │   └── quickstart.ipynb
 ├── SKILL.md                      # 主技能文件（Anthropic Agent Skills 规范，中英双语）

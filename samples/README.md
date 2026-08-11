@@ -19,5 +19,5 @@ phenocv segment --adapter csv \
 - `manifest.csv` — a `CsvManifestAdapter`-compatible manifest
 
 To bring your own data, write a manifest CSV with the columns documented in
-`src/phenocv/adapters/csv_manifest.py`, or implement a custom adapter that
-subclasses `phenocv.adapters.BaseAdapter`.
+`src/phenocv/segmentation/adapters/csv_manifest.py`, or implement a custom
+adapter that subclasses `phenocv.segmentation.adapters.BaseAdapter`.

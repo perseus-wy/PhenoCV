@@ -1,7 +1,7 @@
 """Data adapters for PhenoCV.
 
 An adapter translates a user's dataset layout into the
-:class:`~phenocv.engine.PlantSequence` objects the core engine consumes
+:class:`~phenocv.segmentation.engine.PlantSequence` objects the core engine consumes
 (sequences + anchor masks).
 
 * :class:`CsvManifestAdapter` — the default, data-source-agnostic path: write

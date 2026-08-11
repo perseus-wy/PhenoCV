@@ -15,8 +15,8 @@ sys.path.insert(0, os.path.join(HERE, "..", "tools"))
 sys.path.insert(0, os.path.join(HERE, "..", "src"))
 
 from make_demo_sample import make_sequence  # noqa: E402
-from phenocv.adapters import CsvManifestAdapter  # noqa: E402
-from phenocv.config import load_config  # noqa: E402
+from phenocv.segmentation.adapters import CsvManifestAdapter  # noqa: E402
+from phenocv.segmentation.config import load_config  # noqa: E402
 
 
 def _generate(tmp_path):

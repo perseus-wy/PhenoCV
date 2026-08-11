@@ -1,54 +1,69 @@
 # PhenoCV
 
-> Open-source **vision toolkit for plant phenotyping** — starting with temporal canopy segmentation via SAM 2 video propagation.
+> Open-source **computer-vision toolkit for plant phenotyping** — a composable
+> set of modules (temporal canopy segmentation, a 4-tier trait engine, and room
+> to grow), all sharing one core.
 
 [![PyPI version](https://img.shields.io/pypi/v/phenocv.svg)](https://pypi.org/project/phenocv/)
-[![Python versions](https://img.shields.io/pypi/pyversions/phenocv.svg)](https://pypi.org/project/phenocv/)
+[![Python versions](https://img.shields.io/pypi/pyversions/pypi.svg)](https://pypi.org/project/phenocv/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 [![Tests](https://github.com/perseus-wy/PhenoCV/actions/workflows/ci.yml/badge.svg)](https://github.com/perseus-wy/PhenoCV/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/docs-GitHub-blue.svg)](./docs/)
 
-PhenoCV turns a **few manually labeled keyframes** of a plant sequence into a
-**fully segmented time series** using [SAM 2](https://github.com/facebookresearch/sam2)
-video propagation. It is built to be a *general* plant-phenotyping vision tool,
-not a one-off script: the core engine is **data-source agnostic**, and any
-dataset format plugs in through a thin **adapter**.
+PhenoCV is **not** a single algorithm — it is a toolbox of independent,
+pluggable modules for plant phenotyping. Today it ships two:
+
+- **`phenocv.segmentation`** — turn a *few* manually labeled keyframes of a
+  plant sequence into a **fully segmented time series** using
+  [SAM 2](https://github.com/facebookresearch/sam2) video propagation.
+  The engine is data-source agnostic; any dataset format plugs in through a
+  thin **adapter**.
+- **`phenocv.phenotypes`** — a **4-tier, fail-closed trait engine** that turns a
+  plant mask (+ optional RGB / depth / multispectral) into a flat table of
+  traits: 2D shape → RGB vegetation indices → 3D height/volume → multispectral
+  indices. It runs *every* registered extractor whose inputs you actually have.
+
+Both modules build on a shared **`phenocv.core`** (the trait-extractor registry
++ IO helpers), so adding a third module (e.g. `phenocv.counting`) is just
+"write a package, register your tools" — no core change.
 
 ---
 
 ## 🌟 Why PhenoCV
 
-- **Temporal consistency.** One manual label every few days is enough; SAM 2
-  propagates it across the whole sequence with smooth, drift-free masks.
+- **Composable, not monolithic.** Adopt the segmentation module, the trait
+  engine, or both — each is self-contained and importable on its own.
+- **Temporal consistency (segmentation).** One manual label every few days is
+  enough; SAM 2 propagates it across the whole sequence with smooth,
+  drift-free masks.
 - **Small-seedling aware.** ROI cropping lifts a tiny seedling's effective
   resolution by ~10× (SAM 2 otherwise resizes every frame to 1024px and crushes
   early shoots out of existence).
-- **Fail-closed, auditable.** Every frame records a `pred_source`
-  (`manual` / `propagated` / `propagated_lowthr` / `point_rescue` / `failed_empty`)
-  so you always know *how* a mask was produced.
-- **Annotation-free QA.** Leave-One-Out (LOO) validation reports IoU / Boundary-F1
-  on your real anchors without any extra labeling.
+- **Fail-closed, auditable traits.** Every trait row records `pred_source` /
+  `_inputs` / `_extractors_run`, and unobservable outputs are `NaN` +
+  `missing_reason` — never fabricated.
+- **Annotation-free QA.** Leave-One-Out (LOO) validation reports IoU /
+  Boundary-F1 on your real anchors without extra labeling.
 - **CPU-testable.** The whole logic layer (ROI math, threshold ladder, rescue,
-  IoU/BF1, ISAT export) runs without CUDA — so CI and contributors never need a GPU.
+  IoU/BF1, the trait engine) runs without CUDA — so CI and contributors never
+  need a GPU.
 
-## ✨ Features
+## ✨ Modules
 
-| Area | What you get |
+| Module | What you get |
 |---|---|
-| Propagation | SAM 2 video model, bidirectional (fwd+rev) logit averaging |
-| Recall safety | Threshold-ladder fallback + box-constrained point-rescue for empty frames |
-| Resolution | Square ROI around the union of anchor masks, padded for growth |
-| Quality | LOO IoU / Boundary-F1 report, `pred_source` provenance on every frame |
-| Data | Pluggable adapters — generic CSV/JSON manifest (default) + potted-soybean example |
-| Export | Full-image mask PNGs, ISAT annotation JSONs, `area.csv`, QA grid |
-| Engineering | `pip`-installable, MIT, Python 3.10–3.13, CPU-only test suite |
+| `phenocv.segmentation` | SAM 2 video propagation, bidirectional (fwd+rev) logit averaging, threshold-ladder fallback + point-rescue, LOO IoU/BF1 QA, pluggable adapters, ISAT/CSV/QA export |
+| `phenocv.phenotypes` | 4-tier trait engine: 2D shape (area/bbox/solidity…), RGB vegetation indices (ExG/ExR/VARI…), 3D height/volume (mm, needs depth+intrinsics), multispectral indices (12 + reflectance stats) |
+| `phenocv.core` | Shared trait-extractor **registry** (`@register`) + minimal IO helpers (mask/RGB/depth/multispectral readers) used by every module |
+
+See [Roadmap](#-roadmap) for what is planned next.
 
 ---
 
 ## 💿 Installation
 
 ```bash
-# Core (CPU-only, no torch needed for the engine + adapters + tests)
+# Core (CPU-only, no torch needed for the engine + adapters + trait engine + tests)
 pip install phenocv
 
 # From source, with dev tools (pytest)
@@ -61,7 +76,8 @@ pip install "phenocv[video]"
 > **Note:** The `video` extra pulls in `torch` + `sam2`. Running the actual
 > segmentation needs a SAM 2 checkpoint (e.g. `sam2.1_hiera_l.pt`) and its
 > model config (e.g. `sam2.1_hiera_l.yaml`, shipped with the `sam2` package).
-> Everything else — adapters, config, CPU unit tests — works without it.
+> Everything else — adapters, config, the trait engine, CPU unit tests —
+> works without it.
 
 ## 🚀 Quickstart
 
@@ -89,12 +105,34 @@ phenocv segment \
 
 Outputs land under `results/demo/` (see [Outputs & QA](#-outputs--qa)).
 
-### 3. Programmatic API
+### 3. Compute traits from a mask
+
+```bash
+phenocv phenotype \
+  --mask results/demo/plant_01/<stem>.png \
+  --rgb  /local/mirror/rgb/<stem>.png \
+  --depth /local/mirror/depth_mm/<stem>.png \
+  --calibration configs/intrinsics_second.yaml \
+  --out results/demo/traits/plant_01_<stem>.json
+```
+
+Or batch a whole deliverable (masks + optional RGB / depth / multispectral):
+
+```bash
+python tools/compute_phenotypes.py \
+  --mask-dir results/demo/masks \
+  --rgb-dir  /local/mirror/rgb \
+  --depth-dir /local/mirror/depth_mm \
+  --calibration configs/intrinsics_second.yaml \
+  --out results/demo/phenotypes
+```
+
+### 4. Programmatic API
 
 ```python
-from phenocv.adapters import CsvManifestAdapter
-from phenocv.config import load_config
-from phenocv.engine import run_sam2_video_temporal
+from phenocv.segmentation.adapters import CsvManifestAdapter
+from phenocv.segmentation.config import load_config
+from phenocv.segmentation.engine import run_sam2_video_temporal
 
 sequences = CsvManifestAdapter("samples/demo/manifest.csv").build_sequences()
 cfg = load_config("configs/default.yaml", preset="plant_phenotyping")
@@ -109,19 +147,29 @@ result = run_sam2_video_temporal(
 print(result["loo_summary_interior"])  # IoU / BF1 medians
 ```
 
-### 4. CPU-only smoke test (no GPU, no SAM 2)
+```python
+import numpy as np
+from phenocv.phenotypes import compute_traits
+
+mask = (cv2.imread("mask.png", 0) > 0)
+rgb = cv2.cvtColor(cv2.imread("rgb.png"), cv2.COLOR_BGR2RGB)
+row = compute_traits(mask=mask, rgb=rgb)   # only the extractors whose
+print(row)                                  # inputs you pass will run
+```
+
+### 5. CPU-only smoke test (no GPU, no SAM 2)
 
 ```bash
 pip install -e ".[dev]"
-pytest                      # 16 tests, all CPU
-python -c "import phenocv; print(phenocv.__version__)"
+pytest                      # 30 tests, all CPU
+python -c "import phenocv; print(phenocv.list_modules())"
 ```
 
 ---
 
-## 🧩 Adapter Contract
+## 🧩 Adapter Contract (segmentation)
 
-The engine consumes `PlantSequence` objects. The default
+The segmentation engine consumes `PlantSequence` objects. The default
 `CsvManifestAdapter` reads **one manifest** and needs no dataset code:
 
 | Column | Type | Required | Meaning |
@@ -137,7 +185,7 @@ The engine consumes `PlantSequence` objects. The default
 JSON manifests are also accepted (a list of row dicts, or `{"frames": [...]}`).
 See [docs/adapter_guide.md](./docs/adapter_guide.md) to write your own adapter.
 
-## 🔧 Presets
+## 🔧 Presets (segmentation)
 
 Presets live under the `presets:` block of `configs/default.yaml` and are
 applied with `--preset <name>` (or `load_config(path, preset=...)`).
@@ -155,21 +203,29 @@ Every `TemporalPropagationConfig` field is overridable — see
 
 ```
 phenocv/
-├── engine.py          # core: ROI, propagation, threshold ladder, rescue,
-│                      #        LOO, ISAT export  (data-source agnostic)
-├── cli.py             # `phenocv segment` entry point
-├── config.py          # YAML + preset loader
-└── adapters/
-    ├── base.py            # BaseAdapter (subclass to support new formats)
-    ├── csv_manifest.py    # default generic CSV/JSON manifest adapter
-    └── plant_phenotyping.py  # worked example: potted soybean
+├── __init__.py / __main__.py   # toolbox entry; phenocv.list_modules()
+├── cli.py                      # `phenocv segment|phenotype|list-traits`
+├── core/                       # SHARED BASE for every module
+│   ├── registry.py             # TraitExtractor + @register + available_for
+│   └── io.py                   # mask/RGB/depth/multispectral readers
+├── segmentation/               # MODULE 1 — temporal canopy segmentation
+│   ├── engine.py               # ROI, propagation, threshold ladder, rescue,
+│   │                           #   LOO, ISAT export (data-source agnostic)
+│   ├── config.py               # YAML + preset loader
+│   └── adapters/               # BaseAdapter + CsvManifest + plant example
+└── phenotypes/                 # MODULE 2 — 4-tier trait engine
+    ├── base.py                 # re-export of phenocv.core.registry
+    ├── compute_traits.py       # tier-orchestrated, fail-closed
+    ├── shape2d.py / rgb_indices.py / geometry3d.py / multispectral.py
+    └── calib.py                # camera intrinsics
 ```
 
-The engine never reads your filesystem layout directly — it only sees
-`PlantSequence` objects. That separation is what keeps it reusable across
-domains.
+The segmentation engine never reads your filesystem layout directly — it only
+sees `PlantSequence` objects. The trait engine never hard-codes a trait — it
+runs whatever is registered. That separation is what keeps PhenoCV reusable
+and composable.
 
-## 📊 Outputs & QA
+## 📊 Outputs & QA (segmentation)
 
 `phenocv segment` writes, under `--output`:
 
@@ -196,12 +252,23 @@ domains.
 | `point_rescue` | empty even after ladder; rescued with a box-constrained point |
 | `failed_empty` | no mask found after all fallbacks |
 
+## 🗺️ Roadmap
+
+PhenoCV is a growing toolbox. Planned / welcome modules (each a sibling package
+under `phenocv/`, each registering its tools with `phenocv.core.registry`):
+
+- **`phenocv.counting`** — flower / fruit / tiller counting from masks.
+- **`phenocv.disease`** — lesion / symptom segmentation and scoring.
+- **`phenocv.growth`** — stage classification and growth-curve fitting from the
+  trait engine's long tables.
+
 ## 📚 Documentation
 
-- [docs/tuning.md](./docs/tuning.md) — every knob, and *why* the defaults are what they are
+- [docs/tuning.md](./docs/tuning.md) — every segmentation knob, and *why* the defaults are what they are
 - [docs/export_formats.md](./docs/export_formats.md) — mask / ISAT / CSV / QA layout
 - [docs/adapter_guide.md](./docs/adapter_guide.md) — write your own data adapter
 - [SKILL.md](./SKILL.md) — agent skill (WorkBuddy / Claude Code / Codex)
+- [skills/phenocv-phenotype-port/](./skills/phenocv-phenotype-port/) — WorkBuddy skill for porting a phenotype pipeline into PhenoCV
 
 ## 🤝 Contributing
 
@@ -211,7 +278,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md). CPU-only setup, run `pytest`, open a P
 
 ```bibtex
 @software{phenocv2026,
-  title  = {PhenoCV: Open-source vision toolkit for plant phenotyping},
+  title  = {PhenoCV: Open-source computer-vision toolkit for plant phenotyping},
   author = {perseus-wy},
   year   = {2026},
   url    = {https://github.com/perseus-wy/PhenoCV},

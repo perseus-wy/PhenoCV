@@ -1,30 +1,36 @@
 ---
 name: phenocv
 description: >-
-  PhenoCV — open-source vision toolkit for plant phenotyping. (1) Temporal
-  canopy segmentation via SAM 2 video propagation from sparse manual
-  keyframes; (2) a pluggable, fail-closed **phenotype computation** package
-  that derives 2D shape, RGB-vegetation, 3D-canopy-height, and multispectral
-  traits from a mask (+ optional RGB / depth+calibration / multispectral
-  inputs). Use when a user wants to (a) segment a plant/object time-series
-  from a few labeled frames, (b) build a phenotyping mask dataset, (c) write
-  a data adapter for a new dataset format, (d) tune ROI / threshold / rescue
-  parameters, or (e) compute phenotypic traits (canopy area, vegetation
-  indices, plant height, multispectral indices) from existing masks.
-  PhenoCV —— 面向植物表型的开源视觉工具。① 基于 SAM 2 视频传播的时序冠层分割；
-  ② 可插拔、fail-closed 的**表型计算**包，从掩膜（+ 可选 RGB / 深度+标定 /
-  多光谱输入）派生 2D 形状、RGB 植被指数、3D 冠层高度、多光谱指数四类表型。
-  当用户需要（a）用少量标注帧分割植物/物体时序，（b）构建表型掩膜数据集，
-  （c）为新数据集格式编写适配器，（d）调整 ROI / 阈值 / 救援参数，或
-  （e）基于已有掩膜计算表型（冠层面积、植被指数、株高、多光谱指数）时使用。
+  PhenoCV — composable open-source computer-vision toolkit for plant
+  phenotyping. Modules: (1) `phenocv.segmentation` — temporal canopy
+  segmentation via SAM 2 video propagation from sparse manual keyframes; (2)
+  `phenocv.phenotypes` — a pluggable, fail-closed **phenotype computation**
+  engine that derives 2D shape, RGB-vegetation, 3D-canopy-height, and
+  multispectral traits from a mask (+ optional RGB / depth+calibration /
+  multispectral inputs); both build on `phenocv.core` (shared registry + IO).
+  Use when a user wants to (a) segment a plant/object time-series from a few
+  labeled frames, (b) build a phenotyping mask dataset, (c) write a data
+  adapter for a new dataset format, (d) tune ROI / threshold / rescue
+  parameters, (e) compute phenotypic traits (canopy area, vegetation indices,
+  plant height, multispectral indices) from existing masks, or (f) extend
+  PhenoCV with a new module/tool.
+  PhenoCV —— 可组合的开源植物表型计算机视觉工具箱。模块：① `phenocv.segmentation`
+  —— 基于 SAM 2 视频传播的时序冠层分割；② `phenocv.phenotypes` —— 可插拔、
+  fail-closed 的**表型计算**引擎；二者都构建在 `phenocv.core`（共享注册表+IO）
+  之上。当用户需要（a）用少量标注帧分割植物/物体时序，（b）构建表型掩膜数据集，
+  （c）为新数据集格式编写适配器，（d）调整 ROI / 阈值 / 救援参数，（e）基于已有
+  掩膜计算表型（冠层面积、植被指数、株高、多光谱指数），或（f）为 PhenoCV
+  扩展新模块/工具时使用。
 ---
 
 # PhenoCV Skill
 
-> Open-source vision toolkit for plant phenotyping. Temporal canopy segmentation
-> via SAM 2 video propagation: a few manually labeled keyframes → a fully
-> segmented time series. 面向植物表型的开源视觉工具，基于 SAM 2 视频传播：
-> 少量人工关键帧 → 完整时序分割。
+> Composable open-source computer-vision toolkit for plant phenotyping. Two
+> modules ship today — `phenocv.segmentation` (SAM 2 temporal canopy
+> segmentation) and `phenocv.phenotypes` (a 4-tier, fail-closed trait
+> engine) — both on a shared `phenocv.core`. 可组合的开源植物表型计算机
+> 视觉工具箱：当前含 `phenocv.segmentation`（SAM 2 时序分割）与
+> `phenocv.phenotypes`（四级 fail-closed 表型引擎），共享 `phenocv.core`。
 
 ## When to use / 何时触发
 
@@ -91,9 +97,9 @@ phenocv segment --adapter plant \
 ## Python API / 编程接口
 
 ```python
-from phenocv.adapters import CsvManifestAdapter
-from phenocv.config import load_config
-from phenocv.engine import run_sam2_video_temporal
+from phenocv.segmentation.adapters import CsvManifestAdapter
+from phenocv.segmentation.config import load_config
+from phenocv.segmentation.engine import run_sam2_video_temporal
 
 seqs = CsvManifestAdapter("manifest.csv").build_sequences()
 cfg = load_config("configs/default.yaml", preset="plant_phenotyping")
@@ -255,10 +261,15 @@ class MyTraitExtractor(TraitExtractor):
 
 - README.md / README.zh-CN.md
 - docs/tuning.md, docs/export_formats.md, docs/adapter_guide.md
-- Segmentation engine: `src/phenocv/engine.py` (CPU logic layer is importable &
-  testable without CUDA; `torch`/`sam2` imported lazily only inside
-  `Sam2VideoPropagator`).
-- Phenotype engine: `src/phenocv/phenotypes/` — `base.py` (registry +
-  `TraitExtractor`), `shape2d.py` (L1), `rgb_indices.py` (L2), `geometry3d.py`
-  + `calib.py` (L3), `multispectral.py` (L4), `compute_traits.py` (orchestrator).
-  Pure-CPU (numpy + cv2), no torch. Tests: `tests/test_phenotypes.py`.
+- Segmentation module: `src/phenocv/segmentation/` — `engine.py` (CPU logic
+  layer is importable & testable without CUDA; `torch`/`sam2` imported lazily
+  only inside `Sam2VideoPropagator`), `config.py`, `adapters/`.
+- Phenotype module: `src/phenocv/phenotypes/` — `base.py` (re-exports the
+  shared `phenocv.core.registry` + `TraitExtractor`), `shape2d.py` (L1),
+  `rgb_indices.py` (L2), `geometry3d.py` + `calib.py` (L3), `multispectral.py`
+  (L4), `compute_traits.py` (orchestrator). Pure-CPU (numpy + cv2), no torch.
+  Tests: `tests/test_phenotypes.py`.
+- Shared core: `src/phenocv/core/` — `registry.py` (`TraitExtractor`,
+  `@register`, `available_for`) and `io.py` (mask/RGB/depth/multispectral
+  readers). Add a sibling module under `src/phenocv/<name>/` and register its
+  tools with `phenocv.core.registry.register` to extend the toolkit.

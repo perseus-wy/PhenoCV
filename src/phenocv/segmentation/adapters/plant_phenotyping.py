@@ -4,8 +4,9 @@
 This mirrors a reference dataset layout: a frame-index CSV plus a directory of
 manual anchor masks (one sub-directory per plant, masks named after the source
 RGB stems). It is provided as a concrete example of subclassing
-:class:`~phenocv.adapters.base.BaseAdapter`. For new datasets the generic
-:class:`~phenocv.adapters.csv_manifest.CsvManifestAdapter` is recommended.
+:class:`~phenocv.segmentation.adapters.base.BaseAdapter`. For new datasets the
+generic :class:`~phenocv.segmentation.adapters.csv_manifest.CsvManifestAdapter`
+is recommended.
 
 Notes
 -----

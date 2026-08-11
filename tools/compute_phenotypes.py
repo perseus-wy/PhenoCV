@@ -43,62 +43,13 @@ import numpy as np  # noqa: E402
 
 from phenocv.phenotypes import compute_traits  # noqa: E402
 from phenocv.phenotypes.calib import load_rgb_intrinsics  # noqa: E402
-
-
-# --------------------------------------------------------------------------
-# Readers (self-contained, minimal)
-# --------------------------------------------------------------------------
-def _read_gray_mask(path: Path) -> np.ndarray:
-    import cv2
-    img = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
-    if img is None:
-        raise FileNotFoundError("cannot read mask: %s" % path)
-    return img > 0
-
-
-def _read_rgb(path: Path) -> np.ndarray:
-    import cv2
-    bgr = cv2.imread(str(path), cv2.IMREAD_COLOR)
-    if bgr is None:
-        raise FileNotFoundError("cannot read rgb: %s" % path)
-    return cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
-
-
-def _read_depth_mm(path: Path) -> np.ndarray:
-    if path.suffix.lower() == ".npy":
-        return np.load(str(path)).astype(np.float32)
-    import cv2
-    img = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
-    if img is None:
-        raise FileNotFoundError("cannot read depth: %s" % path)
-    return img.astype(np.float32)
-
-
-def _read_ms_band(path: Path) -> np.ndarray:
-    """Load one multispectral band as float32 reflectance (~unit interval).
-
-    If the source is 16-bit (>1), normalize by 65535. Calibration against a
-    reference panel is the caller's responsibility (see ``empirical_line_gains``).
-    """
-    if path.suffix.lower() == ".npy":
-        arr = np.load(str(path)).astype(np.float32)
-    else:
-        import cv2
-        arr = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
-        if arr is None:
-            raise FileNotFoundError("cannot read ms band: %s" % path)
-        arr = arr.astype(np.float32)
-    if arr.size and arr.max() > 1.5:
-        arr = arr / 65535.0
-    return arr
-
-
-def _first_match(directory: Path, stem: str) -> Path | None:
-    for ext in (".png", ".jpg", ".jpeg", ".tif", ".tiff", ".npy"):
-        p = directory / (stem + ext)
-        if p.exists():
-            return p
-    return None
+from phenocv.core.io import (  # noqa: E402
+    read_gray_mask as _read_gray_mask,
+    read_rgb as _read_rgb,
+    read_depth_mm as _read_depth_mm,
+    read_ms_band as _read_ms_band,
+    first_match as _first_match,
+)
 
 
 # --------------------------------------------------------------------------

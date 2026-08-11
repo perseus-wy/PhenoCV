@@ -97,8 +97,8 @@ phenocv segment --manifest data/manifest.csv \
 Or programmatically:
 
 ```python
-from phenocv.config import load_config
-from phenocv.engine import TemporalPropagationConfig
+from phenocv.segmentation.config import load_config
+from phenocv.segmentation.engine import TemporalPropagationConfig
 
 cfg = load_config("configs/default.yaml", preset="plant_phenotyping")
 cfg["rescue_box_ratio"] = 0.8          # dict form from load_config

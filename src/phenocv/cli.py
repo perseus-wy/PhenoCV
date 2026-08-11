@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Command-line interface for PhenoCV temporal canopy segmentation."""
+"""Command-line interface for the PhenoCV plant-phenotyping toolkit.
+
+Subcommands: ``segment`` (temporal canopy masks via SAM 2) and ``phenotype`` /
+``list-traits`` (the pluggable 4-tier trait engine).
+"""
 
 from __future__ import annotations
 
@@ -13,11 +17,16 @@ from typing import Dict, List, Sequence
 import numpy as np
 
 from . import __version__
-from .config import load_config
-from .adapters import CsvManifestAdapter, PlantPhenotypingAdapter
-from .engine import run_sam2_video_temporal
+from .segmentation.config import load_config
+from .segmentation.adapters import CsvManifestAdapter, PlantPhenotypingAdapter
+from .segmentation.engine import run_sam2_video_temporal
 from . import phenotypes as P
 from .phenotypes.calib import CameraIntrinsics, load_rgb_intrinsics
+from .core.io import (
+    read_gray_mask as _read_gray_mask,
+    read_rgb as _read_rgb,
+    read_depth_mm as _read_depth_mm,
+)
 
 
 def _build_sequences(args) -> List:
@@ -55,34 +64,6 @@ def cmd_segment(args) -> int:
               % (loo.get("iou_median", 0.0), loo.get("iou_mean", 0.0),
                  loo.get("bf1_median", 0.0), loo.get("n", 0)))
     return 0
-
-
-def _read_gray_mask(path: str) -> np.ndarray:
-    import cv2
-    img = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
-    if img is None:
-        raise FileNotFoundError("cannot read mask: %s" % path)
-    return img > 0
-
-
-def _read_rgb(path: str) -> np.ndarray:
-    import cv2
-    bgr = cv2.imread(str(path), cv2.IMREAD_COLOR)
-    if bgr is None:
-        raise FileNotFoundError("cannot read rgb: %s" % path)
-    return cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
-
-
-def _read_depth_mm(path: str) -> np.ndarray:
-    """Load a depth image (16-bit PNG in mm, or .npy) as float32 mm."""
-    p = Path(path)
-    if p.suffix.lower() == ".npy":
-        return np.load(str(p)).astype(np.float32)
-    import cv2
-    img = cv2.imread(str(p), cv2.IMREAD_UNCHANGED)
-    if img is None:
-        raise FileNotFoundError("cannot read depth: %s" % path)
-    return img.astype(np.float32)
 
 
 def cmd_phenotype(args) -> int:
@@ -136,7 +117,8 @@ def cmd_list_traits(args) -> int:
 
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
-        prog="phenocv", description="PhenoCV temporal canopy segmentation toolkit")
+        prog="phenocv",
+        description="PhenoCV plant-phenotyping computer-vision toolkit")
     ap.add_argument("--version", action="version", version="phenocv %s" % __version__)
     sub = ap.add_subparsers(dest="cmd", required=True)
 

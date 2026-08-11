@@ -1,6 +1,6 @@
 # PhenoCV
 
-> 面向植物表型的**开源视觉工具** —— 首个模块为基于 SAM 2 视频传播（video propagation）的时序冠层分割。
+> 面向植物表型的**开源计算机视觉工具箱** —— 由可组合的独立模块构成（时序冠层分割、四级表型引擎，并可持续扩展），全部共享同一个 `core`。
 
 [![PyPI version](https://img.shields.io/pypi/v/phenocv.svg)](https://pypi.org/project/phenocv/)
 [![Python versions](https://img.shields.io/pypi/pyversions/phenocv.svg)](https://pypi.org/project/phenocv/)
@@ -8,32 +8,34 @@
 [![Tests](https://github.com/perseus-wy/PhenoCV/actions/workflows/ci.yml/badge.svg)](https://github.com/perseus-wy/PhenoCV/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/docs-GitHub-blue.svg)](./docs/)
 
-PhenoCV 用**少量人工标注的关键帧**，借助 [SAM 2](https://github.com/facebookresearch/sam2)
-视频传播，得到**完整时序的分割掩膜**。它被设计成**通用**的植物表型视觉工具，而非一次性脚本：
-核心引擎**与数据源无关**，任何数据集格式都可通过轻量**适配器（adapter）**接入。
+PhenoCV 不是单个算法，而是一套**可组合、可插拔**的植物表型视觉模块。当前已提供两个：
+
+- **`phenocv.segmentation`**：用**少量人工标注的关键帧**，借助 [SAM 2](https://github.com/facebookresearch/sam2)
+  视频传播，得到**完整时序的分割掩膜**。引擎**与数据源无关**，任何数据集格式都可通过轻量**适配器（adapter）**接入。
+- **`phenocv.phenotypes`**：**四级、失败即留痕的表型引擎**，从一张植株掩膜（外加可选 RGB / 深度 / 多光谱）算出一张扁平的表型表：
+  2D 形状 → RGB 植被指数 → 3D 高度/体积 → 多光谱指数。它只运行你**实际提供输入**的那些提取器。
+
+两个模块都构建在共享的 **`phenocv.core`**（表型提取器注册表 + IO 工具）之上；
+因此新增第三个模块（例如 `phenocv.counting`）只需「写一个包、注册你的工具」——核心无需改动。
 
 ---
 
 ## 🌟 为什么是 PhenoCV
 
-- **时序一致性**：每隔几天标一帧即可，SAM 2 将标注传播到整条序列，掩膜平滑、无漂移。
+- **可组合，非单体**：分割模块、表型引擎，各自独立、可单独导入使用。
+- **时序一致性（分割）**：每隔几天标一帧即可，SAM 2 将标注传播到整条序列，掩膜平滑、无漂移。
 - **幼苗友好**：ROI 裁剪把早期幼苗的有效分辨率提升约 10×（否则 SAM 2 会把每帧缩放到 1024px，把幼苗压没）。
-- **失败即留痕、可审计**：每帧都记录 `pred_source`
-  （`manual` / `propagated` / `propagated_lowthr` / `point_rescue` / `failed_empty`），你永远知道掩膜是怎么来的。
+- **失败即留痕、可审计（表型）**：每个表型行都记录 `pred_source` / `_inputs` / `_extractors_run`，不可观测的输出为 `NaN` + `missing_reason`——绝不伪造。
 - **无需额外标注的 QA**：留一法（Leave-One-Out, LOO）在你真实的锚帧上报告 IoU / Boundary-F1，无需任何额外标注。
-- **CPU 可测**：整个逻辑层（ROI 运算、阈值阶梯、救援、IoU/BF1、ISAT 导出）无需 CUDA —— CI 与贡献者都不需要 GPU。
+- **CPU 可测**：整个逻辑层（ROI 运算、阈值阶梯、救援、IoU/BF1、表型引擎）无需 CUDA —— CI 与贡献者都不需要 GPU。
 
-## ✨ 核心特性
+## ✨ 模块
 
-| 方向 | 能力 |
+| 模块 | 能力 |
 |---|---|
-| 传播 | SAM 2 视频模型，双向（正向+反向）logits 平均 |
-| 召回兜底 | 阈值阶梯回退 + 带框约束的点救援，处理空帧 |
-| 分辨率 | 以锚帧掩膜并集为基准的方形 ROI，预留生长余量 |
-| 质量 | LOO IoU / Boundary-F1 报告，每帧 `pred_source` 溯源 |
-| 数据 | 可插拔适配器 —— 通用 CSV/JSON manifest（默认）+ 盆栽大豆示例 |
-| 导出 | 全图掩膜 PNG、ISAT 标注 JSON、`area.csv`、QA 拼图 |
-| 工程 | 可 `pip` 安装，MIT，Python 3.10–3.13，纯 CPU 测试套件 |
+| `phenocv.segmentation` | SAM 2 视频传播，双向（正向+反向）logits 平均，阈值阶梯回退 + 点救援，LOO IoU/BF1 QA，可插拔适配器，ISAT/CSV/QA 导出 |
+| `phenocv.phenotypes` | 四级表型引擎：2D 形状（面积/ bbox/ 实心度…）、RGB 植被指数（ExG/ExR/VARI…）、3D 高度/体积（mm，需深度+内参）、多光谱指数（12 个 + 反射率统计） |
+| `phenocv.core` | 所有模块共享的表型提取器**注册表**（`@register`）+ 极简 IO 工具（掩膜 / RGB / 深度 / 多光谱读取器） |
 
 ---
 
@@ -82,9 +84,9 @@ phenocv segment \
 ### 3. 编程 API
 
 ```python
-from phenocv.adapters import CsvManifestAdapter
-from phenocv.config import load_config
-from phenocv.engine import run_sam2_video_temporal
+from phenocv.segmentation.adapters import CsvManifestAdapter
+from phenocv.segmentation.config import load_config
+from phenocv.segmentation.engine import run_sam2_video_temporal
 
 sequences = CsvManifestAdapter("samples/demo/manifest.csv").build_sequences()
 cfg = load_config("configs/default.yaml", preset="plant_phenotyping")
@@ -99,12 +101,22 @@ result = run_sam2_video_temporal(
 print(result["loo_summary_interior"])  # IoU / BF1 中位数
 ```
 
+```python
+import cv2
+from phenocv.phenotypes import compute_traits
+
+mask = (cv2.imread("mask.png", 0) > 0)
+rgb = cv2.cvtColor(cv2.imread("rgb.png"), cv2.COLOR_BGR2RGB)
+row = compute_traits(mask=mask, rgb=rgb)   # 只运行你传入输入所满足的提取器
+print(row)
+```
+
 ### 4. 纯 CPU 冒烟测试（无 GPU、无 SAM 2）
 
 ```bash
 pip install -e ".[dev]"
-pytest                      # 16 个测试，全部 CPU
-python -c "import phenocv; print(phenocv.__version__)"
+pytest                      # 30 个测试，全部 CPU
+python -c "import phenocv; print(phenocv.list_modules())"
 ```
 
 ---
@@ -144,18 +156,26 @@ python -c "import phenocv; print(phenocv.__version__)"
 
 ```
 phenocv/
-├── engine.py          # 核心：ROI、传播、阈值阶梯、救援、
-│                      #        LOO、ISAT 导出（与数据源无关）
-├── cli.py             # `phenocv segment` 入口
-├── config.py          # YAML + 预设加载
-└── adapters/
-    ├── base.py            # BaseAdapter（继承以支持新格式）
-    ├── csv_manifest.py    # 默认通用 CSV/JSON manifest 适配器
-    └── plant_phenotyping.py  # 示例：盆栽大豆
+├── __init__.py / __main__.py   # 工具箱入口；phenocv.list_modules()
+├── cli.py                      # `phenocv segment|phenotype|list-traits`
+├── core/                       # 所有模块共享的【基础】
+│   ├── registry.py             # TraitExtractor + @register + available_for
+│   └── io.py                   # 掩膜/RGB/深度/多光谱 读取器
+├── segmentation/               # 模块 1 —— 时序冠层分割
+│   ├── engine.py               # ROI、传播、阈值阶梯、救援、
+│   │                           #   LOO、ISAT 导出（与数据源无关）
+│   ├── config.py               # YAML + 预设加载
+│   └── adapters/               # BaseAdapter + CsvManifest + 盆栽示例
+└── phenotypes/                 # 模块 2 —— 四级表型引擎
+    ├── base.py                 # 对 phenocv.core.registry 的再导出
+    ├── compute_traits.py       # 按层级编排、失败即留痕
+    ├── shape2d.py / rgb_indices.py / geometry3d.py / multispectral.py
+    └── calib.py                # 相机内参
 ```
 
-引擎从不直接读取你的文件系统布局 —— 它只看到 `PlantSequence` 对象。
-正是这种分离让它能在不同领域间复用。
+分割引擎从不直接读取你的文件系统布局 —— 它只看到 `PlantSequence` 对象。
+表型引擎从不硬编码某个表型 —— 它只运行已注册的工具。正是这种分离让 PhenoCV
+可复用、可组合。
 
 ## 📊 输出与 QA
 
@@ -184,12 +204,21 @@ phenocv/
 | `point_rescue` | 阶梯后仍为空，用带框约束的点救援 |
 | `failed_empty` | 所有兜底后仍无掩膜 |
 
+## 🗺️ 路线图
+
+PhenoCV 是一个持续生长的模块箱。计划 / 欢迎贡献的模块（每个都是 `phenocv/` 下的同级包，并把自己的工具注册到 `phenocv.core.registry`）：
+
+- **`phenocv.counting`** —— 基于掩膜的花 / 果 / 分蘖计数。
+- **`phenocv.disease`** —— 病斑 / 病征分割与评分。
+- **`phenocv.growth`** —— 基于表型引擎长表的生育期分级与生长曲线拟合。
+
 ## 📚 文档
 
-- [docs/tuning.md](./docs/tuning.md) —— 每个旋钮，以及*为什么*默认值是这样
+- [docs/tuning.md](./docs/tuning.md) —— 每个分割旋钮，以及*为什么*默认值是这样
 - [docs/export_formats.md](./docs/export_formats.md) —— 掩膜 / ISAT / CSV / QA 布局
 - [docs/adapter_guide.md](./docs/adapter_guide.md) —— 编写你自己的数据适配器
 - [SKILL.md](./SKILL.md) —— 智能体技能（WorkBuddy / Claude Code / Codex）
+- [skills/phenocv-phenotype-port/](./skills/phenocv-phenotype-port/) —— 把一个表型流水线移植进 PhenoCV 的 WorkBuddy 技能
 
 ## 🤝 贡献
 

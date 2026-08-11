@@ -8,7 +8,7 @@ makes PhenoCV reusable across domains.
 ## The contract
 
 ```python
-from phenocv.engine import PlantSequence, AnchorFrame
+from phenocv.segmentation.engine import PlantSequence, AnchorFrame
 
 PlantSequence(
     key="plant_01",                       # sequence id
@@ -55,8 +55,8 @@ For anything the manifest can't express (custom filename parsing, remote
 storage, multi-camera rigs), subclass `BaseAdapter`:
 
 ```python
-from phenocv.adapters import BaseAdapter
-from phenocv.engine import PlantSequence, AnchorFrame
+from phenocv.segmentation.adapters import BaseAdapter
+from phenocv.segmentation.engine import PlantSequence, AnchorFrame
 import cv2, numpy as np, os
 
 class MyAdapter(BaseAdapter):
@@ -86,8 +86,8 @@ class MyAdapter(BaseAdapter):
 Then:
 
 ```python
-from phenocv.config import load_config
-from phenocv.engine import run_sam2_video_temporal
+from phenocv.segmentation.config import load_config
+from phenocv.segmentation.engine import run_sam2_video_temporal
 from mymodule import MyAdapter
 
 seqs = MyAdapter("/data/my_dataset").build_sequences()
@@ -98,7 +98,7 @@ run_sam2_video_temporal(seqs, "out", checkpoint="sam2.1_hiera_l.pt",
 
 ## Worked example shipped with PhenoCV
 
-`phenocv.adapters.PlantPhenotypingAdapter` is a real example for **potted
+`phenocv.segmentation.adapters.PlantPhenotypingAdapter` is a real example for **potted
 soybean temporal data**: it reads a frame-index CSV plus a per-plant manual-mask
 directory and builds sequences. Use it as a template:
 

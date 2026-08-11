@@ -2,9 +2,9 @@
 """Adapter base class.
 
 An adapter translates a user's dataset layout into the
-:class:`~phenocv.engine.PlantSequence` objects the core engine consumes
+:class:`~phenocv.segmentation.engine.PlantSequence` objects the core engine consumes
 (sequences + anchor masks). Implement ``build_sequences`` for any dataset
-format; the default :class:`~phenocv.adapters.csv_manifest.CsvManifestAdapter`
+format; the default :class:`~phenocv.segmentation.adapters.csv_manifest.CsvManifestAdapter`
 already covers the common case of a single manifest CSV/JSON.
 """
 

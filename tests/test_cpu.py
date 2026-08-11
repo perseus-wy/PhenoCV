@@ -4,7 +4,7 @@
 import numpy as np
 import pytest
 
-from phenocv import engine as e
+from phenocv.segmentation import engine as e
 
 
 def test_compute_roi_pads_and_stays_in_bounds():

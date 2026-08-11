@@ -8,7 +8,7 @@ logits (per the ROI used), and comparisons happen in ROI space.
 
 import numpy as np
 
-from phenocv import engine as e
+from phenocv.segmentation import engine as e
 
 
 class MockPropagator:

@@ -50,7 +50,7 @@ import numpy as np
 try:  # cv2 is a hard dependency, but keep the import error legible
     import cv2
 except ImportError as exc:  # pragma: no cover
-    raise ImportError("phenocv.engine requires opencv-python") from exc
+    raise ImportError("phenocv.segmentation.engine requires opencv-python") from exc
 
 
 __all__ = [
