@@ -27,6 +27,12 @@ Both modules build on a shared **`phenocv.core`** (the trait-extractor registry
 + IO helpers), so adding a third module (e.g. `phenocv.counting`) is just
 "write a package, register your tools" — no core change.
 
+> **🖼️ About the figures.** Every image in this README is **desensitized**: the
+> first two are rendered from a fully synthetic demo (no real field data); the
+> remaining three are tight crops of real frames with calibration boards and
+> labels removed and pot labels blurred. They illustrate the *method*, not any
+> specific experiment or genotype.
+
 ---
 
 ## 🌟 Why PhenoCV
@@ -39,6 +45,9 @@ Both modules build on a shared **`phenocv.core`** (the trait-extractor registry
 - **Small-seedling aware.** ROI cropping lifts a tiny seedling's effective
   resolution by ~10× (SAM 2 otherwise resizes every frame to 1024px and crushes
   early shoots out of existence).
+
+  ![ROI cropping lifts a small seedling's effective resolution ~10× (synthetic demo)](docs/assets/fig2_roi_crop_benefit.png)
+
 - **Fail-closed, auditable traits.** Every trait row records `pred_source` /
   `_inputs` / `_extractors_run`, and unobservable outputs are `NaN` +
   `missing_reason` — never fabricated.
@@ -55,6 +64,8 @@ Both modules build on a shared **`phenocv.core`** (the trait-extractor registry
 | `phenocv.segmentation` | SAM 2 video propagation, bidirectional (fwd+rev) logit averaging, threshold-ladder fallback + point-rescue, LOO IoU/BF1 QA, pluggable adapters, ISAT/CSV/QA export |
 | `phenocv.phenotypes` | 4-tier trait engine: 2D shape (area/bbox/solidity…), RGB vegetation indices (ExG/ExR/VARI…), 3D height/volume (mm, needs depth+intrinsics), multispectral indices (12 + reflectance stats) |
 | `phenocv.core` | Shared trait-extractor **registry** (`@register`) + minimal IO helpers (mask/RGB/depth/multispectral readers) used by every module |
+
+![The 4-tier phenotype engine: from a single mask (+ optional RGB / depth / multispectral) to a flat trait table](docs/assets/fig3_four_tiers.png)
 
 See [Roadmap](#-roadmap) for what is planned next.
 
@@ -102,6 +113,8 @@ phenocv segment \
   --output results/demo \
   --device cuda
 ```
+
+![Temporal propagation: a few sparse anchors expand to a fully segmented sequence (synthetic demo)](docs/assets/fig1_temporal_propagation.png)
 
 Outputs land under `results/demo/` (see [Outputs & QA](#-outputs--qa)).
 
@@ -252,6 +265,8 @@ and composable.
 | `point_rescue` | empty even after ladder; rescued with a box-constrained point |
 | `failed_empty` | no mask found after all fallbacks |
 
+![Annotation-free QA: provenance (`pred_source`) distribution and Leave-One-Out IoU across anchors](docs/assets/fig5_qa_provenance.png)
+
 ## 🗺️ Roadmap
 
 PhenoCV is a growing toolbox. Planned / welcome modules (each a sibling package
@@ -261,6 +276,9 @@ under `phenocv/`, each registering its tools with `phenocv.core.registry`):
 - **`phenocv.disease`** — lesion / symptom segmentation and scoring.
 - **`phenocv.growth`** — stage classification and growth-curve fitting from the
   trait engine's long tables.
+
+![Population curves: mask-only canopy area / vertical extent across all 44 plants
+(real, desensitized crops) — one uniform call scales from a single seedling frame to a whole population](docs/assets/fig4_population_curves.png)
 
 ## 📚 Documentation
 

@@ -18,6 +18,10 @@ PhenoCV 不是单个算法，而是一套**可组合、可插拔**的植物表�
 两个模块都构建在共享的 **`phenocv.core`**（表型提取器注册表 + IO 工具）之上；
 因此新增第三个模块（例如 `phenocv.counting`）只需「写一个包、注册你的工具」——核心无需改动。
 
+> **🖼️ 关于图中的图像。** 本 README 中的每一张图都经过**脱敏**：前两张来自
+> 完全合成的样本（无真实田间数据）；其余三张是真实帧的紧致裁剪，已移除标定板与
+> 标签、并对盆标签做了模糊处理。它们只用于说明*方法*，不代表任何具体实验或基因型。
+
 ---
 
 ## 🌟 为什么是 PhenoCV
@@ -25,6 +29,9 @@ PhenoCV 不是单个算法，而是一套**可组合、可插拔**的植物表�
 - **可组合，非单体**：分割模块、表型引擎，各自独立、可单独导入使用。
 - **时序一致性（分割）**：每隔几天标一帧即可，SAM 2 将标注传播到整条序列，掩膜平滑、无漂移。
 - **幼苗友好**：ROI 裁剪把早期幼苗的有效分辨率提升约 10×（否则 SAM 2 会把每帧缩放到 1024px，把幼苗压没）。
+
+  ![ROI 裁剪把小幼苗的有效分辨率提升约 10×（合成示例）](docs/assets/fig2_roi_crop_benefit.png)
+
 - **失败即留痕、可审计（表型）**：每个表型行都记录 `pred_source` / `_inputs` / `_extractors_run`，不可观测的输出为 `NaN` + `missing_reason`——绝不伪造。
 - **无需额外标注的 QA**：留一法（Leave-One-Out, LOO）在你真实的锚帧上报告 IoU / Boundary-F1，无需任何额外标注。
 - **CPU 可测**：整个逻辑层（ROI 运算、阈值阶梯、救援、IoU/BF1、表型引擎）无需 CUDA —— CI 与贡献者都不需要 GPU。
@@ -36,6 +43,8 @@ PhenoCV 不是单个算法，而是一套**可组合、可插拔**的植物表�
 | `phenocv.segmentation` | SAM 2 视频传播，双向（正向+反向）logits 平均，阈值阶梯回退 + 点救援，LOO IoU/BF1 QA，可插拔适配器，ISAT/CSV/QA 导出 |
 | `phenocv.phenotypes` | 四级表型引擎：2D 形状（面积/ bbox/ 实心度…）、RGB 植被指数（ExG/ExR/VARI…）、3D 高度/体积（mm，需深度+内参）、多光谱指数（12 个 + 反射率统计） |
 | `phenocv.core` | 所有模块共享的表型提取器**注册表**（`@register`）+ 极简 IO 工具（掩膜 / RGB / 深度 / 多光谱读取器） |
+
+![四级表型引擎：从单张掩膜（+ 可选 RGB / 深度 / 多光谱）到一张扁平表型表](docs/assets/fig3_four_tiers.png)
 
 ---
 
@@ -78,6 +87,8 @@ phenocv segment \
   --output results/demo \
   --device cuda
 ```
+
+![时序传播：少量稀疏锚帧扩展为完整分割序列（合成示例）](docs/assets/fig1_temporal_propagation.png)
 
 结果落在 `results/demo/`（见 [输出与 QA](#-输出与-qa)）。
 
@@ -204,6 +215,8 @@ phenocv/
 | `point_rescue` | 阶梯后仍为空，用带框约束的点救援 |
 | `failed_empty` | 所有兜底后仍无掩膜 |
 
+![无需额外标注的 QA：溯源（`pred_source`）分布与留一法（LOO）IoU](docs/assets/fig5_qa_provenance.png)
+
 ## 🗺️ 路线图
 
 PhenoCV 是一个持续生长的模块箱。计划 / 欢迎贡献的模块（每个都是 `phenocv/` 下的同级包，并把自己的工具注册到 `phenocv.core.registry`）：
@@ -211,6 +224,9 @@ PhenoCV 是一个持续生长的模块箱。计划 / 欢迎贡献的模块（每
 - **`phenocv.counting`** —— 基于掩膜的花 / 果 / 分蘖计数。
 - **`phenocv.disease`** —— 病斑 / 病征分割与评分。
 - **`phenocv.growth`** —— 基于表型引擎长表的生育期分级与生长曲线拟合。
+
+![群体曲线：全部 44 株的「仅掩膜」冠层面积 / 纵向范围（真实、脱敏裁剪）——
+一次统一调用即可从单帧幼苗扩展到整批群体](docs/assets/fig4_population_curves.png)
 
 ## 📚 文档
 

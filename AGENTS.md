@@ -10,6 +10,10 @@ segmented time series with SAM 2 video propagation;
 derives 2D shape / RGB vegetation / 3D canopy height / multispectral traits
 from a mask (+ optional richer inputs).
 
+> **中文定位：** PhenoCV 是一个可组合的开源植物表型计算机视觉工具箱，由共享 `phenocv.core`
+> 的独立模块构成。已发布 `phenocv.segmentation`（SAM 2 时序分割）与 `phenocv.phenotypes`
+> （四级 fail-closed 表型引擎）。完整中英双语说明见 [`SKILL.md`](./SKILL.md)。
+
 **Agent skill:** see [`SKILL.md`](./SKILL.md) for the full trigger conditions,
 concepts, CLI/API usage, adapter contract, presets, phenotyping tiers, and QA
 conventions. This file is a thin entry point — do not duplicate the skill body here.
