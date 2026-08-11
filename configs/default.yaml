@@ -1,0 +1,83 @@
+# PhenoCV temporal propagation parameters
+#
+# Engine : phenocv/engine.py  (data-source agnostic)
+# Adapter: phenocv/adapters    (csv_manifest default, plant_phenotyping example)
+# Entry  : phenocv segment --config configs/default.yaml ...
+#
+# Structure:
+#   propagation  base params, always applied
+#   presets      domain presets, overlaid via --preset <name>
+#
+# Unknown keys are ignored by TemporalPropagationConfig.from_mapping,
+# so this file stays forward-compatible with newer engine versions.
+
+propagation:
+  # ---- ROI cropping ---------------------------------------------------------
+  # SAM 2 resizes every input frame to 1024px internally. A full 1280x720 frame
+  # crushes a small seedling (hundreds of pixels) out of existence, so we crop a
+  # square ROI around the union bbox of the anchor masks (padded) before sending
+  # it to propagation.
+  roi_pad_ratio: 1.9      # bbox padding multiplier; canopy grows many-fold over
+                          # a season, so leave generous headroom
+  roi_min_size: 384       # min ROI side, avoids too-small context for early shoots
+  roi_max_size: null      # max ROI side; null = bounded by image size
+
+  # ---- bidirectional propagation -------------------------------------------
+  # forward + reverse, then average logits. Unidirectional propagation drifts
+  # monotonically far from the anchors.
+  bidirectional: true
+
+  # ---- threshold ladder -----------------------------------------------------
+  # step down on empty to recover recall. Small early targets have low
+  # confidence; a hard 0.0 cutoff drops many frames.
+  base_threshold: 0.0
+  threshold_ladder: [-0.5, -1.0, -2.0, -4.0]
+  min_valid_area: 1
+
+  # ---- point-rescue ---------------------------------------------------------
+  # when the ladder still yields empty, prompt with the nearest anchor's
+  # centroid point, and push out-of-box logits to -1e9 to stop SAM 2 from
+  # grabbing background in a corner.
+  rescue_enabled: true
+  rescue_box_ratio: 0.65
+  rescue_min_box: 8.0
+
+  # ---- export ---------------------------------------------------------------
+  jpeg_quality: 95        # ROI frame-stack JPEG quality (SAM 2 eats JPEG only)
+  isat_category: plant
+  isat_simplify_eps: 2.0  # approxPolyDP tolerance; larger = fewer contour points
+  isat_min_area: 10.0     # drop connected components smaller than this (de-noise)
+  qa_grid_cols: 6
+  qa_grid_tile: 200
+
+
+presets:
+
+  # Potted soybean temporal (reference production config).
+  plant_phenotyping:
+    roi_pad_ratio: 1.9
+    roi_min_size: 384
+    bidirectional: true
+    threshold_ladder: [-0.5, -1.0, -2.0, -4.0]
+    rescue_enabled: true
+    isat_category: plant
+
+  # Stable-scale, sharp-boundary objects (e.g. industrial parts, fixed-view
+  # objects): tighten ROI, drop low-threshold fallback to avoid over-recall.
+  rigid_object:
+    roi_pad_ratio: 1.3
+    roi_min_size: 256
+    threshold_ladder: []
+    rescue_enabled: false
+    isat_category: object
+    isat_min_area: 30.0
+
+  # High-recall priority: weak / easily-lost targets; prefer over-segmentation
+  # over empty frames.
+  high_recall:
+    roi_pad_ratio: 2.2
+    roi_min_size: 448
+    threshold_ladder: [-0.5, -1.0, -2.0, -4.0, -8.0]
+    rescue_enabled: true
+    rescue_box_ratio: 0.8
+    isat_min_area: 4.0

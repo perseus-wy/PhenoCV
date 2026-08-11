@@ -1,0 +1,212 @@
+# PhenoCV
+
+> 面向植物表型的**开源视觉工具** —— 首个模块为基于 SAM 2 视频传播（video propagation）的时序冠层分割。
+
+[![PyPI version](https://img.shields.io/pypi/v/phenocv.svg)](https://pypi.org/project/phenocv/)
+[![Python versions](https://img.shields.io/pypi/pyversions/phenocv.svg)](https://pypi.org/project/phenocv/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
+[![Tests](https://github.com/perseus-wy/PhenoCV/actions/workflows/ci.yml/badge.svg)](https://github.com/perseus-wy/PhenoCV/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-GitHub-blue.svg)](./docs/)
+
+PhenoCV 用**少量人工标注的关键帧**，借助 [SAM 2](https://github.com/facebookresearch/sam2)
+视频传播，得到**完整时序的分割掩膜**。它被设计成**通用**的植物表型视觉工具，而非一次性脚本：
+核心引擎**与数据源无关**，任何数据集格式都可通过轻量**适配器（adapter）**接入。
+
+---
+
+## 🌟 为什么是 PhenoCV
+
+- **时序一致性**：每隔几天标一帧即可，SAM 2 将标注传播到整条序列，掩膜平滑、无漂移。
+- **幼苗友好**：ROI 裁剪把早期幼苗的有效分辨率提升约 10×（否则 SAM 2 会把每帧缩放到 1024px，把幼苗压没）。
+- **失败即留痕、可审计**：每帧都记录 `pred_source`
+  （`manual` / `propagated` / `propagated_lowthr` / `point_rescue` / `failed_empty`），你永远知道掩膜是怎么来的。
+- **无需额外标注的 QA**：留一法（Leave-One-Out, LOO）在你真实的锚帧上报告 IoU / Boundary-F1，无需任何额外标注。
+- **CPU 可测**：整个逻辑层（ROI 运算、阈值阶梯、救援、IoU/BF1、ISAT 导出）无需 CUDA —— CI 与贡献者都不需要 GPU。
+
+## ✨ 核心特性
+
+| 方向 | 能力 |
+|---|---|
+| 传播 | SAM 2 视频模型，双向（正向+反向）logits 平均 |
+| 召回兜底 | 阈值阶梯回退 + 带框约束的点救援，处理空帧 |
+| 分辨率 | 以锚帧掩膜并集为基准的方形 ROI，预留生长余量 |
+| 质量 | LOO IoU / Boundary-F1 报告，每帧 `pred_source` 溯源 |
+| 数据 | 可插拔适配器 —— 通用 CSV/JSON manifest（默认）+ 盆栽大豆示例 |
+| 导出 | 全图掩膜 PNG、ISAT 标注 JSON、`area.csv`、QA 拼图 |
+| 工程 | 可 `pip` 安装，MIT，Python 3.10–3.13，纯 CPU 测试套件 |
+
+---
+
+## 💿 安装
+
+```bash
+# 核心（仅 CPU，引擎/适配器/测试均不需要 torch）
+pip install phenocv
+
+# 源码安装 + 开发工具（pytest）
+pip install -e ".[dev]"
+
+# 可选：GPU 视频传播（SAM 2）
+pip install "phenocv[video]"
+```
+
+> **说明：** `video` 额外依赖会拉入 `torch` + `sam2`。实际跑分割需要 SAM 2 权重
+> （如 `sam2.1_hiera_l.pt`）及其模型配置（如 `sam2.1_hiera_l.yaml`，随 `sam2` 包提供）。
+> 其余部分 —— 适配器、配置、CPU 单元测试 —— 都不需要它。
+
+## 🚀 快速开始
+
+### 1. 生成合成示例（无真实数据，纯 CPU）
+
+```bash
+python tools/make_demo_sample.py --out samples/demo
+```
+
+生成 `samples/demo/{frames,masks,manifest.csv}` —— 一个随时间增大的绿色圆盘，共 6 帧、3 个稀疏锚帧。
+
+### 2. 运行分割
+
+```bash
+phenocv segment \
+  --adapter csv \
+  --manifest samples/demo/manifest.csv \
+  --config configs/default.yaml --preset plant_phenotyping \
+  --checkpoint /path/to/sam2.1_hiera_l.pt \
+  --model-cfg sam2.1_hiera_l.yaml \
+  --output results/demo \
+  --device cuda
+```
+
+结果落在 `results/demo/`（见 [输出与 QA](#-输出与-qa)）。
+
+### 3. 编程 API
+
+```python
+from phenocv.adapters import CsvManifestAdapter
+from phenocv.config import load_config
+from phenocv.engine import run_sam2_video_temporal
+
+sequences = CsvManifestAdapter("samples/demo/manifest.csv").build_sequences()
+cfg = load_config("configs/default.yaml", preset="plant_phenotyping")
+
+result = run_sam2_video_temporal(
+    sequences,
+    output_root="results/demo",
+    checkpoint="/path/to/sam2.1_hiera_l.pt",
+    model_cfg="sam2.1_hiera_l.yaml",
+    device="cuda",
+)
+print(result["loo_summary_interior"])  # IoU / BF1 中位数
+```
+
+### 4. 纯 CPU 冒烟测试（无 GPU、无 SAM 2）
+
+```bash
+pip install -e ".[dev]"
+pytest                      # 16 个测试，全部 CPU
+python -c "import phenocv; print(phenocv.__version__)"
+```
+
+---
+
+## 🧩 适配器契约
+
+引擎消费 `PlantSequence` 对象。默认的 `CsvManifestAdapter` 读取**单个 manifest**，
+无需任何数据集代码：
+
+| 列名 | 类型 | 必填 | 含义 |
+|---|---|---|---|
+| `sequence_key` | str | ✅ | 序列 id，如 `plant_01` |
+| `frame_idx` | int | ⚪ | 0 基时序索引（缺省按行序） |
+| `frame_path` | str | ✅ | RGB 帧路径 |
+| `frame_label` | str | ⚪ | 可读标签（日期 / DAS） |
+| `is_anchor` | 0/1 | ✅ | 该帧是否带人工掩膜 |
+| `mask_path` | str | ⚪ | 锚帧掩膜 PNG（当 `is_anchor=1` 时必填） |
+| *（任意其他列）* | — | ⚪ | 原样透传为 `frame_extras` |
+
+也支持 JSON manifest（行字典列表，或 `{"frames": [...]}`）。
+自定义适配器见 [docs/adapter_guide.md](./docs/adapter_guide.md)。
+
+## 🔧 预设
+
+预设位于 `configs/default.yaml` 的 `presets:` 块，用 `--preset <名称>`（或
+`load_config(path, preset=...)`）应用。
+
+| 预设 | 适用场景 | 关键参数 |
+|---|---|---|
+| `plant_phenotyping` | 盆栽大豆时序（参考配置） | ROI 余量 1.9，开启阈值阶梯，开启救援 |
+| `rigid_object` | 边界清晰、尺度稳定的物体 | ROI 收紧 1.3，无阶梯，无救援，类别 `object` |
+| `high_recall` | 弱目标 / 易丢失目标 | ROI 放大 2.2，更深阶梯（至 −8.0），更小 `isat_min_area` |
+
+每个 `TemporalPropagationConfig` 字段都可覆盖 —— 见 [docs/tuning.md](./docs/tuning.md)。
+
+## 🏗️ 架构
+
+```
+phenocv/
+├── engine.py          # 核心：ROI、传播、阈值阶梯、救援、
+│                      #        LOO、ISAT 导出（与数据源无关）
+├── cli.py             # `phenocv segment` 入口
+├── config.py          # YAML + 预设加载
+└── adapters/
+    ├── base.py            # BaseAdapter（继承以支持新格式）
+    ├── csv_manifest.py    # 默认通用 CSV/JSON manifest 适配器
+    └── plant_phenotyping.py  # 示例：盆栽大豆
+```
+
+引擎从不直接读取你的文件系统布局 —— 它只看到 `PlantSequence` 对象。
+正是这种分离让它能在不同领域间复用。
+
+## 📊 输出与 QA
+
+`phenocv segment` 在 `--output` 下写入：
+
+```
+<output>/
+├── run_manifest.json        # 完整运行记录 + LOO 汇总
+├── loo_quality.csv          # 每个锚帧的 LOO：iou、bf1、pred_source
+├── frame_manifest.csv       # 每帧：pred_source、area、thr、extras
+├── sequence_summary.csv     # 每序列汇总（area 首/末/最大、计数）
+└── <sequence_key>/
+    ├── masks/<stem>.png     # 全图二值掩膜（0/255）
+    ├── jsons/<stem>.json    # ISAT 标注（未设 --no-isat 时）
+    ├── area.csv             # 每帧面积 + pred_source + extras
+    └── qa_grid.png          # 帧×掩膜概览拼图（未设 --no-qa 时）
+```
+
+`pred_source` 取值与含义：
+
+| `pred_source` | 含义 |
+|---|---|
+| `manual` | 人工标注锚帧，原样透传 |
+| `propagated` | SAM 2 在基础阈值（0.0）下传播 |
+| `propagated_lowthr` | 基础阈值为空，经阈值阶梯找回 |
+| `point_rescue` | 阶梯后仍为空，用带框约束的点救援 |
+| `failed_empty` | 所有兜底后仍无掩膜 |
+
+## 📚 文档
+
+- [docs/tuning.md](./docs/tuning.md) —— 每个旋钮，以及*为什么*默认值是这样
+- [docs/export_formats.md](./docs/export_formats.md) —— 掩膜 / ISAT / CSV / QA 布局
+- [docs/adapter_guide.md](./docs/adapter_guide.md) —— 编写你自己的数据适配器
+- [SKILL.md](./SKILL.md) —— 智能体技能（WorkBuddy / Claude Code / Codex）
+
+## 🤝 贡献
+
+见 [CONTRIBUTING.md](./CONTRIBUTING.md)。CPU 环境即可开发，跑 `pytest`，开 PR。
+
+## 📜 引用
+
+```bibtex
+@software{phenocv2026,
+  title  = {PhenoCV: Open-source vision toolkit for plant phenotyping},
+  author = {perseus-wy},
+  year   = {2026},
+  url    = {https://github.com/perseus-wy/PhenoCV},
+  license = {MIT}
+}
+```
+
+## 📄 许可证
+
+[MIT](./LICENSE) © 2026 perseus-wy.

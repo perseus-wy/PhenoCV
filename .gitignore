@@ -1,0 +1,62 @@
+# ----- Python -----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+*.so
+*.c
+
+# ----- Virtual environments -----
+.venv/
+venv/
+env/
+ENV/
+
+# ----- Real datasets (NEVER commit) -----
+data/
+datasets/
+samples/*
+!samples/README.md
+results/
+
+# ----- Model weights -----
+*.pt
+*.pth
+*.ckpt
+*.onnx
+checkpoints/
+weights/
+
+# ----- Secrets / credentials -----
+.env
+secrets/
+*.key
+*.pem
+credentials.json
+
+# ----- Personal paths (desensitization guard) -----
+/Volumes/
+//10.
+\\\\10.
+W:/
+X:/
+C:/Users/
+E:/Software/
+E:/phenoscreen_scratch/
+
+# ----- IDE / OS -----
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ----- Test / coverage -----
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/

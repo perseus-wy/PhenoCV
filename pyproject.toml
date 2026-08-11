@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "phenocv"
+version = "0.1.0"
+description = "Open-source vision toolkit for plant phenotyping — temporal canopy segmentation via SAM2 video propagation, with pluggable data adapters."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "perseus-wy" }]
+keywords = [
+    "plant-phenotyping", "computer-vision", "segmentation",
+    "sam2", "video-propagation", "agriculture",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+]
+dependencies = [
+    "numpy>=1.23",
+    "opencv-python-headless>=4.7",
+    "pyyaml>=6.0",
+    "pillow>=9.0",
+    "tqdm>=4.64",
+]
+
+[project.optional-dependencies]
+# GPU video propagation (SAM 2). Optional so CI / CPU-only users skip torch.
+video = [
+    "torch>=2.1",
+    "torchvision>=0.16",
+    "sam2>=1.1",
+]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+]
+
+[project.scripts]
+phenocv = "phenocv.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/perseus-wy/PhenoCV"
+Repository = "https://github.com/perseus-wy/PhenoCV"
+Documentation = "https://github.com/perseus-wy/PhenoCV#readme"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
