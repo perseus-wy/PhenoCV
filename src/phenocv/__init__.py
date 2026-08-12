@@ -31,7 +31,7 @@ def list_modules() -> list[str]:
     A module is "installed" when its package imports without raising (some
     modules need optional deps such as ``torch`` for SAM 2).
     """
-    known = ["segmentation", "phenotypes"]
+    known = ["segmentation", "phenotypes", "thermal"]
     installed = []
     import importlib
 

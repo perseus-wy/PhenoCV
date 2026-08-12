@@ -21,6 +21,11 @@ samples/*
 !samples/README.md
 results/
 
+# ----- Generated demo artifacts (regenerated on demand by tools/make_demo_sample.py) -----
+samples/demo/**/*.png
+samples/demo/**/*.npy
+samples/demo/**/*.csv
+
 # ----- Model weights -----
 *.pt
 *.pth

@@ -43,6 +43,18 @@ video = [
 dev = [
     "pytest>=7.4",
     "pytest-cov>=4.1",
+    "pandas>=1.5",
+    "scipy>=1.10",
+    "statsmodels>=0.14",
+    "openpyxl>=3.1",
+]
+
+# Thermal (FLIR) module extras: environment alignment + stress/uncertainty tooling.
+thermal = [
+    "pandas>=1.5",
+    "scipy>=1.10",
+    "statsmodels>=0.14",
+    "openpyxl>=3.1",
 ]
 
 [project.scripts]

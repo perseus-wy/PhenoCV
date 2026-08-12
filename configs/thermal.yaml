@@ -1,0 +1,43 @@
+# PhenoCV thermal (FLIR) module configuration
+#
+# Module: phenocv/thermal    (pure-CPU thermal phenotyping)
+# Loader: phenocv.thermal.load_thermal_config(path, preset=...)
+#
+# Unknown keys under `thermal:` are ignored by ThermalConfig.from_mapping,
+# so this file stays forward-compatible with newer engine versions.
+
+thermal:
+  # Fixed display temperature scale (°C) used by overlays / normalization.
+  temperature_vmin_c: 22.0
+  temperature_vmax_c: 29.0
+
+  # Environment-sensor interpolation: reject gaps larger than this (no extrapolation).
+  interpolation_max_gap_sec: 600.0
+
+  # Whole-canopy vertical partition strategy.
+  layer_partition: relative_height_thirds
+
+  # Semantic column name used as the Delta-T reference ambient temperature.
+  delta_t_reference_column: ambient_c
+
+  # Uncertainty-estimation defaults for the stress/rewatering analysis.
+  block_bootstrap_iterations: 4000
+  block_bootstrap_block_size: 12
+  hac_max_lags: 12
+  light_phase_threshold_lux: 50.0
+  random_seed: 20260728
+
+
+presets:
+
+  # Potted soybean under chamber climate control (reference production config).
+  potted_soybean:
+    temperature_vmin_c: 18.0
+    temperature_vmax_c: 32.0
+    interpolation_max_gap_sec: 300.0
+    light_phase_threshold_lux: 50.0
+
+  # Field deployment with sparse (hourly) logging — allow larger interpolation gaps.
+  field_sparse:
+    interpolation_max_gap_sec: 1800.0
+    light_phase_threshold_lux: 1000.0

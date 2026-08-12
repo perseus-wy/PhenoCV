@@ -2,17 +2,25 @@
 
 PhenoCV is a **composable open-source computer-vision toolkit for plant
 phenotyping** — a set of independent, pluggable modules that share one
-`phenocv.core`. Two modules ship today:
+`phenocv.core`. Three modules ship today:
 (1) **`phenocv.segmentation`** — temporal canopy segmentation: a few manually
 labeled keyframes of a plant/object sequence are propagated to a fully
 segmented time series with SAM 2 video propagation;
 (2) **`phenocv.phenotypes`** — a pluggable, fail-closed trait engine that
 derives 2D shape / RGB vegetation / 3D canopy height / multispectral traits
-from a mask (+ optional richer inputs).
+from a mask (+ optional richer inputs);
+(3) **`phenocv.thermal`** — a pure-CPU thermal (FLIR) phenotyping module
+(io / traits / environment / stress + an optional lazy SAM 2 segmentation
+layer): temperature traits, canopy-layer partitioning by relative height,
+environment-sensor time alignment, and before/after stress / rewatering
+analysis with bootstrap & HAC uncertainty. **The thermal core is importable and
+testable without a GPU** (`numpy` + `cv2` + `pandas` + `scipy` + `statsmodels`,
+lazy; `torch`/`sam2` only inside the optional segmentation layer).
 
 > **中文定位：** PhenoCV 是一个可组合的开源植物表型计算机视觉工具箱，由共享 `phenocv.core`
-> 的独立模块构成。已发布 `phenocv.segmentation`（SAM 2 时序分割）与 `phenocv.phenotypes`
-> （四级 fail-closed 表型引擎）。完整中英双语说明见 [`SKILL.md`](./SKILL.md)。
+> 的独立模块构成。已发布 `phenocv.segmentation`（SAM 2 时序分割）、`phenocv.phenotypes`
+> （四级 fail-closed 表型引擎）与 `phenocv.thermal`（纯 CPU 热红外表型模块）。完整中英双语说明见
+> [`SKILL.md`](./SKILL.md)。
 
 **Agent skill:** see [`SKILL.md`](./SKILL.md) for the full trigger conditions,
 concepts, CLI/API usage, adapter contract, presets, phenotyping tiers, and QA
@@ -75,6 +83,9 @@ src/phenocv/phenotypes/                       # MODULE 2 — 4-tier trait engine
   geometry3d.py calib.py                      #   L3 mask+depth+calibration (plant height, mm)
   multispectral.py                            #   L4 mask+multispectral (MS400 4-band indices)
   compute_traits.py                           #   orchestrator: available_for → merge rows, per-extractor try/except
+src/phenocv/thermal/                          # MODULE 3 — pure-CPU thermal (FLIR) phenotyping
+  config.py io.py traits.py environment.py stress.py   #   core (no torch at import)
+  segmentation.py                             #   optional SAM 2 layer; torch/sam2 lazy-imported
 configs/default.yaml          # propagation params + presets
 tests/                        # CPU-only unit + orchestration tests (incl. test_phenotypes.py)
 tools/make_demo_sample.py     # synthetic sample generator (no real data)

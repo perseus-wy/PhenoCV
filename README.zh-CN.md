@@ -8,15 +8,18 @@
 [![Tests](https://github.com/perseus-wy/PhenoCV/actions/workflows/ci.yml/badge.svg)](https://github.com/perseus-wy/PhenoCV/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/docs-GitHub-blue.svg)](./docs/)
 
-PhenoCV 不是单个算法，而是一套**可组合、可插拔**的植物表型视觉模块。当前已提供两个：
+PhenoCV 不是单个算法，而是一套**可组合、可插拔**的植物表型视觉模块。当前已提供三个：
 
 - **`phenocv.segmentation`**：用**少量人工标注的关键帧**，借助 [SAM 2](https://github.com/facebookresearch/sam2)
   视频传播，得到**完整时序的分割掩膜**。引擎**与数据源无关**，任何数据集格式都可通过轻量**适配器（adapter）**接入。
 - **`phenocv.phenotypes`**：**四级、失败即留痕的表型引擎**，从一张植株掩膜（外加可选 RGB / 深度 / 多光谱）算出一张扁平的表型表：
   2D 形状 → RGB 植被指数 → 3D 高度/体积 → 多光谱指数。它只运行你**实际提供输入**的那些提取器。
+- **`phenocv.thermal`**：**纯 CPU 的热红外（FLIR）表型模块**：逐像素温度表型、按相对高度划分的上/中/下层冠层温度、冠层相对环境的 ΔT、
+  环境传感器时序对齐，以及前后对照的胁迫/复水分析（移动块 bootstrap + HAC 不确定性）。核心仅依赖
+  `numpy` + `cv2` + `pandas` + `scipy` + `statsmodels`（后两者懒加载），无需 GPU；可选的 SAM 2 时序分割层懒加载。
 
-两个模块都构建在共享的 **`phenocv.core`**（表型提取器注册表 + IO 工具）之上；
-因此新增第三个模块（例如 `phenocv.counting`）只需「写一个包、注册你的工具」——核心无需改动。
+三个模块都构建在共享的 **`phenocv.core`**（表型提取器注册表 + IO 工具）之上；
+因此新增模块（例如 `phenocv.counting`）只需「写一个包、注册你的工具」——核心无需改动。
 
 > **🖼️ 关于图中的图像。** 本 README 中的每一张图都经过**脱敏**：前两张来自
 > 完全合成的样本（无真实田间数据）；其余三张是真实帧的紧致裁剪，已移除标定板与
@@ -42,6 +45,7 @@ PhenoCV 不是单个算法，而是一套**可组合、可插拔**的植物表�
 |---|---|
 | `phenocv.segmentation` | SAM 2 视频传播，双向（正向+反向）logits 平均，阈值阶梯回退 + 点救援，LOO IoU/BF1 QA，可插拔适配器，ISAT/CSV/QA 导出 |
 | `phenocv.phenotypes` | 四级表型引擎：2D 形状（面积/ bbox/ 实心度…）、RGB 植被指数（ExG/ExR/VARI…）、3D 高度/体积（mm，需深度+内参）、多光谱指数（12 个 + 反射率统计） |
+| `phenocv.thermal` | 纯 CPU 热红外表型：温度表型（`temp_*` 列名）、按相对高度划分的上/中/下层冠层温度、冠层相对环境 ΔT、环境传感器对齐（禁止外推、缺口防护）、前后对照胁迫分析（移动块 bootstrap CI + HAC + 光暗对照）；可选的 SAM 2 分割层 |
 | `phenocv.core` | 所有模块共享的表型提取器**注册表**（`@register`）+ 极简 IO 工具（掩膜 / RGB / 深度 / 多光谱读取器） |
 
 ![四级表型引擎：从单张掩膜（+ 可选 RGB / 深度 / 多光谱）到一张扁平表型表](docs/assets/fig3_four_tiers.png)
@@ -216,6 +220,50 @@ phenocv/
 | `failed_empty` | 所有兜底后仍无掩膜 |
 
 ![无需额外标注的 QA：溯源（`pred_source`）分布与留一法（LOO）IoU](docs/assets/fig5_qa_provenance.png)
+
+## 🌡️ 热红外（FLIR）表型
+
+`phenocv.thermal` 是一个**纯 CPU** 的热红外（红外）表型模块：它把真实的
+温度矩阵（`°C`）+ 冠层掩膜，算成一张扁平的温度表型表，并可把环境传感器对齐到
+帧时刻、分析前后对照的胁迫/复水响应。其设计契约与表型引擎一致 —— **失败即留痕**
+（缺失/不可观测/空 → `NaN` + `missing_reason`，绝不编造）且**数据无关**（路径与列
+映射由调用方提供）。核心（`io` / `traits` / `environment` / `stress`）**无需 GPU、无需
+torch** 即可导入运行；只有可选的 `segmentation` 子层才懒加载 `torch`/`sam2`。
+
+> **纯 Python 接口：** 热红外模块尚未接入 `phenocv` CLI —— 请用 Python 调用。
+
+```python
+import numpy as np
+import phenocv.thermal as thermal
+
+# io：读取真实温度矩阵 + 生成供 SAM2 提示的 3 通道特征图
+temperature = np.load("stem_temp.npy").astype("float32")     # 真实 °C 矩阵
+feat = thermal.thermal_feature_image(temperature)            # 绝对/局部ΔT/梯度
+mask = thermal.polygons_to_mask((H, W), polygons)
+
+# traits：一次调用只运行满足输入的提取器
+row = thermal.compute_thermal_traits(mask=mask, temperature=temperature, ambient=23.0)
+# -> canopy_temp_median_c、canopy_upper_median_c、canopy_delta_t_c 等
+# 缺失 ambient → canopy_delta_t_c = NaN + missing_reason（绝不编造）
+
+# environment：把传感器对齐到帧时刻（禁止外推、缺口防护）
+env = thermal.read_environment_workbook(
+    "environment.xlsx",
+    column_map={"DateTime": "timestamp", "AirTemp": "ambient_c", "CO2": "co2_ppm"})
+aligned = thermal.align_environment_to_frames(
+    frame_timestamps, env, ["ambient_c", "co2_ppm"],
+    max_gap_sec=600.0, timezone="UTC")        # 越界 → NaN + qc_flag
+
+# stress：围绕事件的前/后对照，带移动块 bootstrap CI + 协变量校正 HAC
+# 回归与暗期内部阴性对照
+result = thermal.analyze_stress_response(
+    timeseries_df, event_time, metric="canopy_temp_c",
+    phase_column="phase", lit_value="light", random_seed=42)
+```
+
+SAM 2 时序热红外分割（`ThermalVideoSegmenter` / `segment_video_with_sam2`）需要
+`pip install "phenocv[video]"` 加 SAM 2 权重；`thermal_feature_image` 作为 3 通道输入
+喂给 SAM 2（而非伪彩色帧），清理以目标锚定为锚，确保吞并的盆体绝不被发布（fail-closed）。
 
 ## 🗺️ 路线图
 

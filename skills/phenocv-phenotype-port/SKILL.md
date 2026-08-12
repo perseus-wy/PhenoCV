@@ -1,6 +1,6 @@
 ---
 name: phenocv-phenotype-port
-description: "Use this skill when porting a private computer-vision / plant-phenotyping pipeline into an open-source, agent-friendly toolkit, or when building a pluggable, fail-closed trait-extraction engine from scratch. It captures the reusable pattern behind PhenoCV's `phenocv.phenotypes` package: a registry-based four-tier input model (mask-only to mask+RGB to mask+depth+calib to mask+multispectral), a `TraitExtractor` extension point, and a strict fail-closed convention so another agent can compute traits from a mask deliverable without knowing internals. 本技能用于把私有 CV / 植物表型流水线移植为开源、智能体友好的工具包，或从零搭建可插拔、fail-closed 的表型提取引擎；沉淀 PhenoCV `phenocv.phenotypes` 的可复用模式：四层输入注册表、TraitExtractor 扩展点、严格 fail-closed 约定。"
+description: "Use this skill when porting a private computer-vision / plant-phenotyping pipeline into an open-source, agent-friendly toolkit, or when building a pluggable, fail-closed trait-extraction engine from scratch. It captures the reusable pattern behind PhenoCV's `phenocv.phenotypes` package and the `phenocv.thermal` (FLIR) module: a registry-based input-tier model (mask-only → mask+RGB → mask+depth+calib → mask+multispectral; and for thermal, mask + thermal + ambient temperature), a `TraitExtractor` extension point, data-agnostic core logic, and a strict fail-closed convention so another agent can compute traits from a mask / temperature deliverable without knowing internals. 本技能用于把私有 CV / 植物表型流水线移植为开源、智能体友好的工具包，或从零搭建可插拔、fail-closed 的表型提取引擎；沉淀 PhenoCV `phenocv.phenotypes` 与 `phenocv.thermal`（热红外 FLIR）的可复用模式：分层的输入注册表、TraitExtractor 扩展点、数据无关的核心逻辑、严格 fail-closed 约定（缺失/不可观测 → NaN + missing_reason）。"
 agent_created: true
 ---
 
@@ -15,8 +15,11 @@ open-source, extensible, *fail-closed* trait engine that other agents can drive.
   into a public repo.
 - A calculation module has grown `if/else` branches on "do we have RGB? depth?
   multispectral?" — replace with a **tier registry**.
-- You need a mask deliverable that *another* agent (or a human) can turn into a
-  trait table without re-implementing the math.
+- Porting a **thermal / FLIR** pipeline (temperature matrix + mask → canopy-layer
+  traits, environment-sensor alignment, before/after stress analysis) into
+  `phenocv.thermal` — same fail-closed + data-agnostic + lazy-import contract.
+- You need a mask / temperature deliverable that *another* agent (or a human) can
+  turn into a trait table without re-implementing the math.
 
 ## Core pattern: four input tiers
 

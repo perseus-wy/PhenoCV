@@ -6,13 +6,19 @@ PhenoCV is a **composable open-source computer-vision toolkit for plant
 phenotyping** — a set of independent, pluggable modules that share one
 `phenocv.core`.
 
-当前已发布两个模块 (Two modules ship today):
+当前已发布三个模块 (Three modules ship today):
 - **`phenocv.segmentation`** —— 基于 SAM 2 视频传播的时序冠层分割：用少量人工标注的
   关键帧，得到完整时序的分割掩膜。 / temporal canopy segmentation via SAM 2 video
   propagation from sparse manual keyframes.
 - **`phenocv.phenotypes`** —— 可插拔、失败即留痕（fail-closed）的**四级表型引擎**
   （2D 形状 / RGB 植被指数 / 3D 株高 / 多光谱指数）：从一张掩膜（+ 可选 RGB / 深度+标定 /
   多光谱）算出一张扁平表型表。 / a pluggable, fail-closed 4-tier trait engine.
+- **`phenocv.thermal`** —— **纯 CPU** 的热红外（FLIR）表型模块（io / traits /
+  environment / stress + 可选的懒加载 SAM 2 分割层）：温度表型、按相对高度的分层、
+  环境传感器时序对齐、前后对照的胁迫/复水分析（bootstrap + HAC 不确定性）。
+  **热红外核心无需 GPU 即可导入与测试**（`numpy` + `cv2` + `pandas` + `scipy` +
+  `statsmodels` 懒加载；`torch`/`sam2` 仅在可选分割层内懒加载）。 /
+  pure-CPU thermal (FLIR) phenotyping module — importable & testable without a GPU.
 
 **完整技能文档 / Full skill doc:** 见 [`SKILL.md`](./SKILL.md) —— 触发条件、概念、CLI/API、
 适配器契约、预设、表型层级、QA 约定均在其中。本文件是轻量入口，请勿在此重复技能正文。
@@ -70,6 +76,9 @@ src/phenocv/phenotypes/                       # MODULE 2 — 4-tier trait engine
   geometry3d.py calib.py                      #   L3 mask+depth+calibration (plant height, mm)
   multispectral.py                            #   L4 mask+multispectral (MS400 4-band indices)
   compute_traits.py                           #   orchestrator: available_for → merge rows, per-extractor try/except
+src/phenocv/thermal/                          # MODULE 3 — pure-CPU thermal (FLIR) phenotyping
+  config.py io.py traits.py environment.py stress.py   #   core (no torch at import)
+  segmentation.py                             #   optional SAM 2 layer; torch/sam2 lazy-imported
 configs/default.yaml          # propagation params + presets
 scripts/ tools/               # demo generator, batch phenotype compute
 docs/{tuning,export_formats,adapter_guide}.md

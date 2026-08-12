@@ -4,33 +4,44 @@ description: >-
   PhenoCV — composable open-source computer-vision toolkit for plant
   phenotyping. Modules: (1) `phenocv.segmentation` — temporal canopy
   segmentation via SAM 2 video propagation from sparse manual keyframes; (2)
-  `phenocv.phenotypes` — a pluggable, fail-closed **phenotype computation**
+  `  phenocv.phenotypes` — a pluggable, fail-closed **phenotype computation**
   engine that derives 2D shape, RGB-vegetation, 3D-canopy-height, and
   multispectral traits from a mask (+ optional RGB / depth+calibration /
-  multispectral inputs); both build on `phenocv.core` (shared registry + IO).
+  multispectral inputs); (3) `phenocv.thermal` — a pure-CPU **thermal (FLIR)
+  phenotyping** module: per-pixel temperature traits, canopy-layer partitioning
+  by relative height, environment-sensor time alignment, and before/after
+  stress/rewatering analysis with block-bootstrap & HAC uncertainty; all three
+  build on `phenocv.core` (shared registry + IO).
   Use when a user wants to (a) segment a plant/object time-series from a few
   labeled frames, (b) build a phenotyping mask dataset, (c) write a data
   adapter for a new dataset format, (d) tune ROI / threshold / rescue
   parameters, (e) compute phenotypic traits (canopy area, vegetation indices,
-  plant height, multispectral indices) from existing masks, or (f) extend
-  PhenoCV with a new module/tool.
+  plant height, multispectral indices) from existing masks, (f) compute thermal
+  (FLIR) traits from a temperature matrix + mask, align environment sensors onto
+  frame timestamps, or analyse before/after stress/rewatering responses, or
+  (g) extend PhenoCV with a new module/tool.
   PhenoCV —— 可组合的开源植物表型计算机视觉工具箱。模块：① `phenocv.segmentation`
   —— 基于 SAM 2 视频传播的时序冠层分割；② `phenocv.phenotypes` —— 可插拔、
-  fail-closed 的**表型计算**引擎；二者都构建在 `phenocv.core`（共享注册表+IO）
-  之上。当用户需要（a）用少量标注帧分割植物/物体时序，（b）构建表型掩膜数据集，
-  （c）为新数据集格式编写适配器，（d）调整 ROI / 阈值 / 救援参数，（e）基于已有
-  掩膜计算表型（冠层面积、植被指数、株高、多光谱指数），或（f）为 PhenoCV
-  扩展新模块/工具时使用。
+  fail-closed 的**表型计算**引擎；③ `phenocv.thermal` —— 纯 CPU 的**热红外（FLIR）
+  表型**模块：逐像素温度表型、按相对高度的分层、环境传感器时序对齐、前后对照的
+  胁迫/复水分析（移动块 bootstrap + HAC 不确定性）。三者都构建在 `phenocv.core`
+  （共享注册表+IO）之上。当用户需要（a）用少量标注帧分割植物/物体时序，（b）构建
+  表型掩膜数据集，（c）为新数据集格式编写适配器，（d）调整 ROI / 阈值 / 救援参数，
+  （e）基于已有掩膜计算表型（冠层面积、植被指数、株高、多光谱指数），（f）基于温度
+  矩阵+掩膜计算热红外表型、把环境传感器对齐到帧时刻、或分析前后对照的胁迫/复水响应，
+  或（g）为 PhenoCV 扩展新模块/工具时使用。
 ---
 
 # PhenoCV Skill
 
-> Composable open-source computer-vision toolkit for plant phenotyping. Two
+> Composable open-source computer-vision toolkit for plant phenotyping. Three
 > modules ship today — `phenocv.segmentation` (SAM 2 temporal canopy
-> segmentation) and `phenocv.phenotypes` (a 4-tier, fail-closed trait
-> engine) — both on a shared `phenocv.core`. 可组合的开源植物表型计算机
-> 视觉工具箱：当前含 `phenocv.segmentation`（SAM 2 时序分割）与
-> `phenocv.phenotypes`（四级 fail-closed 表型引擎），共享 `phenocv.core`。
+> segmentation), `phenocv.phenotypes` (a 4-tier, fail-closed trait engine), and
+> `phenocv.thermal` (a pure-CPU thermal / FLIR phenotyping module) — all on a
+> shared `phenocv.core`. 可组合的开源植物表型计算机视觉工具箱：当前含
+> `phenocv.segmentation`（SAM 2 时序分割）、`phenocv.phenotypes`（四级
+> fail-closed 表型引擎）与 `phenocv.thermal`（纯 CPU 热红外表型模块），共享
+> `phenocv.core`。
 
 ## When to use / 何时触发
 
@@ -48,6 +59,15 @@ description: >-
   多光谱）**，想要**表型指标** —— 冠层面积与形状、RGB 植被指数、株高、多光谱指数。
 - User wants to **add a new trait/algorithm** to the phenotype engine. 用户想
   给表型引擎**新增一种表型/算法**。
+- User has a **thermal (FLIR) temperature matrix + canopy mask** and wants
+  per-pixel temperature traits, upper/middle/lower canopy-layer temperatures, or
+  canopy ΔT vs ambient. 用户有**热红外温度矩阵 + 冠层掩膜**，想要逐像素温度表型、
+  上/中/下层冠层温度或冠层相对环境的 ΔT。
+- User wants to **align environment sensors** (air temp / CO₂ / VPD / soil
+  moisture) onto FLIR frame timestamps, or **analyse before/after stress or
+  rewatering** (block-bootstrap CI + HAC + light/dark control). 用户想**把环境
+  传感器**对齐到热红外帧时刻，或**分析前后对照的胁迫/复水响应**（移动块 bootstrap +
+  HAC + 光暗对照）。
 
 ## Core concepts / 核心概念
 
@@ -74,6 +94,19 @@ pip install "phenocv[video]"     # + torch + sam2 for actual GPU propagation
 
 Running real segmentation needs a SAM 2 checkpoint (e.g. `sam2.1_hiera_l.pt`)
 and its model config (`sam2.1_hiera_l.yaml`).
+
+`pip install -e ".[dev]"` installs the **full CPU thermal stack** (pandas +
+scipy + statsmodels + openpyxl). The thermal core (io / traits / environment /
+stress) is importable and testable with **no GPU and no torch**. The optional
+`phenocv.thermal.segmentation` (SAM 2 temporal segmentation) needs
+`pip install "phenocv[video]"` plus a SAM 2 checkpoint; `torch`/`sam2` are
+imported lazily only inside that sub-layer, so importing `phenocv.thermal`
+itself never pulls in CUDA.
+`pip install -e ".[dev]"` 即包含**完整的 CPU 热红外栈**（pandas + scipy +
+statsmodels + openpyxl）。热红外核心（io / traits / environment / stress）无需
+GPU、无需 torch 即可导入与测试。可选的 `phenocv.thermal.segmentation`（SAM 2 时序
+分割）需要 `pip install "phenocv[video]"` 加 SAM 2 权重；`torch`/`sam2` 仅在该子层
+内懒加载，因此导入 `phenocv.thermal` 本身不会引入 CUDA。
 
 ## CLI / 命令行
 
@@ -257,6 +290,204 @@ class MyTraitExtractor(TraitExtractor):
   false-positive filter removes unsupported arcs using RGB + NDVI dual evidence.
   L4 反射率走经验线增益校准；盆沿假阳性用 RGB + NDVI 双证据过滤。
 
+## Thermal (FLIR) phenotyping / 热红外（FLIR）表型
+
+`phenocv.thermal` is a **pure-CPU thermal (FLIR) phenotyping module** ported
+from a private pipeline and shared into PhenoCV as a clean, data-agnostic,
+fail-closed toolkit. It adds a third input tier to the shared `phenocv.core`
+registry (`thermal` + `ambient` temperature alongside the existing `mask`) and
+ships four cooperating submodules plus one optional GPU sub-layer:
+
+- **`io`** — temperature / meta / mask readers, the 3-channel `thermal_feature_image`
+  (absolute / local-ΔT / gradient), cv2-only overlays, and layer-overlap
+  resolution. 温度/元数据/掩膜读取、3 通道热特征图、cv2 叠加、分层重叠消解。
+- **`traits`** — a registry-driven, fail-closed trait engine (canopy temperature,
+  upper/middle/lower layer temperature by relative height, canopy ΔT). 受注册表
+  驱动的 fail-closed 表型引擎（整株温度、上/中/下层温度、冠层 ΔT）。
+- **`environment`** — align an environment time-series onto frame timestamps by
+  linear interpolation (no extrapolation; gap-guarded). 环境时序按帧时刻线性
+  插值对齐（禁止外推、缺口防护）。
+- **`stress`** — before/after stress / rewatering analysis with block-bootstrap &
+  HAC uncertainty, plus generic population roll-ups. 前后对照胁迫/复水分析（移动块
+  bootstrap + HAC 不确定性）与通用人群级汇总。
+- **`segmentation`** *(optional, GPU)* — SAM 2 temporal thermal segmentation;
+  `torch`/`sam2` imported lazily, never at import time. 可选的 SAM 2 时序分割，
+  torch/sam2 仅懒加载。
+
+> **Python-API only:** `phenocv.thermal` is not yet wired into the `phenocv` CLI
+> (no `thermal` subcommand exists in `src/phenocv/cli.py`). Drive it from Python
+> as shown below. **纯 Python 接口：** `phenocv.thermal` 尚未接入 `phenocv` CLI
+> （`cli.py` 中暂无 `thermal` 子命令），请按下列示例用 Python 调用。
+
+### Design contract / 设计契约
+
+- **Pure CPU** — only `numpy` + `cv2` + `pandas` + `scipy` + `statsmodels` (the
+  last two lazy-imported). No `torch` / `sam2` / `matplotlib` at import time, so
+  the core is importable and testable without a GPU or a plotting backend.
+  **纯 CPU** —— 仅 numpy + cv2 + pandas + scipy + statsmodels（后两者懒加载）。
+  导入时不引入 torch / sam2 / matplotlib，因此核心无需 GPU 或绘图后端即可导入与测试。
+- **Fail-closed** — missing / unobservable / empty inputs return `NaN` +
+  `missing_reason` (or `<name>_error`), never a fabricated value.
+  **失败即留痕** —— 缺失/不可观测/空输入返回 `NaN` + `missing_reason`（或
+  `<name>_error`），绝不编造数值。
+- **Data-agnostic** — core logic never reads a specific dataset layout; paths and
+  column maps are supplied by the caller. **数据无关** —— 核心逻辑不读取特定数据集
+  布局，路径与列映射由调用方提供。
+- All bootstrap / HAC randomness is seeded via `random_seed` → reproducible.
+  所有 bootstrap / HAC 随机性由 `random_seed` 控制，结果可复现。
+- Trait test key names are `temp_*` (e.g. `temp_median_c`). 表型测试列名为
+  `temp_*`（如 `temp_median_c`）。
+
+### Python API / 编程接口
+
+**io — read, render, partition**
+
+```python
+import numpy as np
+import phenocv.thermal as thermal
+
+temperature = np.load("stem_temp.npy").astype("float32")   # true °C matrix
+meta = thermal.load_thermal_meta("stem_temp.npy")           # sibling *_meta.json ({} if absent)
+
+# 3-channel feature image (absolute / local-ΔT / gradient) for SAM2 prompts:
+feat = thermal.thermal_feature_image(temperature)
+
+# render on a fixed scale (cv2 only, headless-safe, no matplotlib):
+overlay = thermal.make_overlay(temperature, mask, vmin=22.0, vmax=29.0)
+layer_overlay = thermal.make_layer_overlay(
+    temperature, layer_masks, vmin=22.0, vmax=29.0)        # upper/middle/lower colours
+
+# resolve overlapping canopy layers by distance to each layer's identity seed:
+resolved, overlap_count = thermal.resolve_layer_overlap(layer_masks, identity_seeds)
+
+# polygon -> boolean mask (lossless, PIL-based), and round-trip IO:
+mask = thermal.polygons_to_mask((H, W), polygons)
+thermal.save_mask(mask, "mask.png"); mask = thermal.load_mask("mask.png")
+```
+
+**traits — fail-closed temperature traits**
+
+```python
+from phenocv.thermal import (
+    summarize_masked_temperature, partition_canopy_by_relative_height,
+    compute_thermal_traits, CanopyTemperatureExtractor,
+    LayerTemperatureExtractor, CanopyDeltaTExtractor,
+)
+
+# one uniform call runs only the extractors whose inputs you pass:
+row = compute_thermal_traits(mask=mask, temperature=temperature, ambient=23.0)
+# -> canopy_temp_median_c, canopy_upper_median_c, canopy_delta_t_c, ...
+# missing ambient -> canopy_delta_t_c = NaN + missing_reason (never fabricated)
+
+# core helpers:
+stats = summarize_masked_temperature(temperature, mask)            # temp_median_c, temp_p10_c, pixel_count, ...
+layers = partition_canopy_by_relative_height(mask)                # {"upper","middle","lower"} by relative height
+
+# extractor classes (each declares requires + tier, registered via @register):
+CanopyTemperatureExtractor   # mask + thermal            -> whole-canopy temperature
+LayerTemperatureExtractor    # mask + thermal            -> upper/middle/lower temperatures + range
+CanopyDeltaTExtractor       # mask + thermal + ambient  -> canopy minus ambient ΔT
+```
+
+**environment — align sensors onto frame timestamps**
+
+```python
+from phenocv.thermal import (
+    read_sensor_workbook, read_environment_workbook,
+    align_environment_to_frames, EnvironmentJoiner,
+)
+
+# map raw columns -> semantic names; the reader never coerces `timestamp` to numeric:
+env = read_environment_workbook(
+    "environment.xlsx",
+    column_map={"DateTime": "timestamp", "AirTemp": "ambient_c", "CO2": "co2_ppm"},
+)
+
+# linear-interpolate sensor series onto frame timestamps.
+# No extrapolation: out-of-range frames -> NaN + qc_flag="outside_sensor_range".
+# Gap guard: brackets wider than max_gap_sec -> NaN + qc_flag="sensor_gap_exceeds_limit".
+aligned = align_environment_to_frames(
+    frame_timestamps, env,
+    value_columns=["ambient_c", "co2_ppm"],
+    max_gap_sec=600.0, timezone="UTC",
+)   # DataFrame: value_columns + qc_flag + bracket_gap_sec + nearest_offset_sec
+
+# stateful alternative over many target times:
+joiner = EnvironmentJoiner(env, ["ambient_c"], timezone="UTC", max_gap_sec=600.0)
+result = joiner.align(frame_timestamps[0])   # InterpolationResult(values, qc_flag, ...)
+```
+
+**stress — before/after response with uncertainty**
+
+```python
+from phenocv.thermal import (
+    analyze_stress_response, recovery_kinetics, summarize_plants,
+    summarize_paired_differences, detect_light_transitions,
+    calculate_layer_correlations, pair_shifted_times,
+    vapour_pressure_deficit, moving_block_bootstrap_ci, hac_mean_ci,
+)
+
+# before/after contrast around an event (e.g. rewatering): block-bootstrap CI +
+# covariate-adjusted HAC regression, with a dark-phase internal negative control
+# (transpiration-driven cooling should vanish without light):
+result = analyze_stress_response(
+    timeseries_df, event_time, metric="canopy_temp_c",
+    phase_column="phase", lit_value="light",
+    covariate_columns=["vpd_kpa", "co2_ppm"],
+    random_seed=42,
+)
+result["phase_contrast"]   # per-phase effect + block-bootstrap CI + Welch p
+result["hac_adjusted"]     # metric ~ post (+ covariates), HAC-robust
+result["kinetics"]         # optional post-event recovery bins
+
+# generic, data-agnostic roll-ups (no private hard-coding):
+plant_df, phase_df = summarize_plants(
+    {"plant_1": df_1, "plant_2": df_2}, ["canopy_temp_c"], phase_column="phase")
+paired = pair_shifted_times(df, df, shift_hours=24.0, metric_columns=["canopy_temp_c"])
+summarize_paired_differences(paired, ["canopy_temp_c"])              # HAC + block-bootstrap roll-ups
+detect_light_transitions(frames, "timestamp", "phase", ["canopy_temp_c"])
+calculate_layer_correlations(frames, ["ambient_c"], ["canopy_temp_c"])  # Spearman + BH q
+vpd = vapour_pressure_deficit(temp_c_series, rh_pct_series)          # Tetens VPD (kPa)
+
+# reusable uncertainty estimators:
+lo, hi = moving_block_bootstrap_ci(values, statistic="mean", random_seed=42)   # circular block bootstrap 95% CI
+mean, ci_lo, ci_hi = hac_mean_ci(values, max_lags=12)                         # Newey–West HAC 95% CI
+```
+
+**segmentation (optional) — SAM 2 temporal thermal segmentation**
+
+```python
+from phenocv.thermal import (
+    ThermalVideoSegmenter, segment_video_with_sam2,
+    ThermalSegmentConfig, clean_target_mask, merge_bidirectional,
+    load_prompt_config, thermal_feature_image,
+)
+
+# Pure-CPU logic layer (importable & testable without CUDA):
+cfg = ThermalSegmentConfig()                       # 640x480 validation, cleanup + QC defaults
+raw = np.zeros((H, W), bool); raw[20:80, 20:80] = True
+cleaned, info = clean_target_mask(
+    raw, reference_points=[(50.0, 50.0)], reference_labels=[1], is_reference=True)
+# info["hard_fail"] flags a background-engulf / plant-merged-with-soil event
+merged = merge_bidirectional(fwd_map, bwd_map, n, (H, W))   # forward priority, bidirectional merge
+
+# GPU layer (torch/sam2 imported lazily inside this call):
+summary = ThermalVideoSegmenter(
+    checkpoint_path="/path/to/sam2.1_hiera_l.pt",
+    model_size="small", device="cuda",
+).run_segment(
+    segment_id="segment_01", stems=stems,
+    temperature_paths=temp_paths, reference_stem=ref_stem,
+    prompt_cfg=load_prompt_config("prompt.yaml"),
+    output_dir="results/thermal/segment_01",
+)
+# Every frame carries `pred_source` (manual / propagated / failed_empty), and
+# `thermal_feature_image` (absolute/local-ΔT/gradient) is fed to SAM2 as the
+# 3-channel input — never a pseudo-color frame. Cleanup is target-anchored:
+# components without identity-support are dropped, so an engulfed pot is never
+# published (fail-closed: a QC failure raises and writes segment_failed_qc.json).
+```
+
 ## References / 参考
 
 - README.md / README.zh-CN.md
@@ -269,6 +500,20 @@ class MyTraitExtractor(TraitExtractor):
   `rgb_indices.py` (L2), `geometry3d.py` + `calib.py` (L3), `multispectral.py`
   (L4), `compute_traits.py` (orchestrator). Pure-CPU (numpy + cv2), no torch.
   Tests: `tests/test_phenotypes.py`.
+- Thermal module: `src/phenocv/thermal/` — `config.py` (`ThermalConfig` /
+  `load_thermal_config`), `io.py` (temperature/mask IO + `thermal_feature_image`
+  + cv2 overlays + `resolve_layer_overlap`), `traits.py`
+  (`summarize_masked_temperature`, `partition_canopy_by_relative_height`,
+  `CanopyTemperatureExtractor` / `LayerTemperatureExtractor` /
+  `CanopyDeltaTExtractor`, `compute_thermal_traits` — pure-CPU, no torch),
+  `environment.py` (`read_*_workbook`, `align_environment_to_frames`,
+  `EnvironmentJoiner`, no-extrapolation + gap guard), `stress.py`
+  (`analyze_stress_response`, `recovery_kinetics`, `summarize_plants`,
+  `calculate_layer_correlations`, `pair_shifted_times`, `vapour_pressure_deficit`,
+  block-bootstrap & HAC uncertainty — scipy/statsmodels lazy-imported), and
+  `segmentation.py` (optional SAM 2 layer; `torch`/`sam2` lazy-imported only
+  inside `segment_video_with_sam2` / `ThermalVideoSegmenter`). Thermal core is
+  importable & testable without CUDA. Tests: `tests/test_thermal*.py`.
 - Shared core: `src/phenocv/core/` — `registry.py` (`TraitExtractor`,
   `@register`, `available_for`) and `io.py` (mask/RGB/depth/multispectral
   readers). Add a sibling module under `src/phenocv/<name>/` and register its

@@ -11,7 +11,7 @@
 [![Docs](https://img.shields.io/badge/docs-GitHub-blue.svg)](./docs/)
 
 PhenoCV is **not** a single algorithm — it is a toolbox of independent,
-pluggable modules for plant phenotyping. Today it ships two:
+pluggable modules for plant phenotyping. Today it ships three:
 
 - **`phenocv.segmentation`** — turn a *few* manually labeled keyframes of a
   plant sequence into a **fully segmented time series** using
@@ -22,10 +22,16 @@ pluggable modules for plant phenotyping. Today it ships two:
   plant mask (+ optional RGB / depth / multispectral) into a flat table of
   traits: 2D shape → RGB vegetation indices → 3D height/volume → multispectral
   indices. It runs *every* registered extractor whose inputs you actually have.
+- **`phenocv.thermal`** — a **pure-CPU thermal (FLIR) phenotyping** module:
+  per-pixel temperature traits, upper/middle/lower canopy-layer partitioning by
+  relative height, environment-sensor time alignment, and before/after
+  stress / rewatering analysis with block-bootstrap & HAC uncertainty. Only
+  `numpy` + `cv2` + `pandas` + `scipy` + `statsmodels` (last two lazy); no GPU
+  needed for the core. An optional SAM 2 temporal-segmentation layer is lazy.
 
-Both modules build on a shared **`phenocv.core`** (the trait-extractor registry
-+ IO helpers), so adding a third module (e.g. `phenocv.counting`) is just
-"write a package, register your tools" — no core change.
+All three modules build on a shared **`phenocv.core`** (the trait-extractor
+registry + IO helpers), so adding another module (e.g. `phenocv.counting`) is
+just "write a package, register your tools" — no core change.
 
 > **🖼️ About the figures.** Every image in this README is **desensitized**: the
 > first two are rendered from a fully synthetic demo (no real field data); the
@@ -63,6 +69,7 @@ Both modules build on a shared **`phenocv.core`** (the trait-extractor registry
 |---|---|
 | `phenocv.segmentation` | SAM 2 video propagation, bidirectional (fwd+rev) logit averaging, threshold-ladder fallback + point-rescue, LOO IoU/BF1 QA, pluggable adapters, ISAT/CSV/QA export |
 | `phenocv.phenotypes` | 4-tier trait engine: 2D shape (area/bbox/solidity…), RGB vegetation indices (ExG/ExR/VARI…), 3D height/volume (mm, needs depth+intrinsics), multispectral indices (12 + reflectance stats) |
+| `phenocv.thermal` | Pure-CPU FLIR phenotyping: temperature traits (`temp_*` keys), canopy-layer (upper/middle/lower) temperatures by relative height, canopy ΔT vs ambient, environment-sensor alignment (no extrapolation, gap-guarded), before/after stress analysis (block-bootstrap CI + HAC + light/dark control); optional SAM 2 segmentation layer |
 | `phenocv.core` | Shared trait-extractor **registry** (`@register`) + minimal IO helpers (mask/RGB/depth/multispectral readers) used by every module |
 
 ![The 4-tier phenotype engine: from a single mask (+ optional RGB / depth / multispectral) to a flat trait table](docs/assets/fig3_four_tiers.png)
@@ -266,6 +273,56 @@ and composable.
 | `failed_empty` | no mask found after all fallbacks |
 
 ![Annotation-free QA: provenance (`pred_source`) distribution and Leave-One-Out IoU across anchors](docs/assets/fig5_qa_provenance.png)
+
+## 🌡️ Thermal (FLIR) phenotyping
+
+`phenocv.thermal` is a **pure-CPU** thermal (infrared) phenotyping module: it
+turns a true-temperature matrix (`°C`) + a canopy mask into a flat table of
+temperature traits and lets you align environment sensors onto frame timestamps
+and analyse before/after stress / rewatering responses. Design contract is the
+same as the trait engine — **fail-closed** (missing / unobservable / empty →
+`NaN` + `missing_reason`, never fabricated) and **data-agnostic** (caller
+supplies paths & column maps). The core (`io` / `traits` / `environment` /
+`stress`) imports and runs with **no GPU and no torch**; only the optional
+`segmentation` sub-layer lazy-imports `torch`/`sam2`.
+
+> **Python-API only:** thermal is not yet wired into the `phenocv` CLI — call it
+> from Python.
+
+```python
+import numpy as np
+import phenocv.thermal as thermal
+
+# io: read a true-temperature matrix + build a 3ch feature image for SAM2 prompts
+temperature = np.load("stem_temp.npy").astype("float32")     # true °C matrix
+feat = thermal.thermal_feature_image(temperature)             # abs / local-ΔT / gradient
+mask = thermal.polygons_to_mask((H, W), polygons)
+
+# traits: one call runs only the extractors whose inputs you pass
+row = thermal.compute_thermal_traits(mask=mask, temperature=temperature, ambient=23.0)
+# -> canopy_temp_median_c, canopy_upper_median_c, canopy_delta_t_c, ...
+# missing ambient -> canopy_delta_t_c = NaN + missing_reason (never fabricated)
+
+# environment: align sensors onto frame timestamps (no extrapolation; gap-guarded)
+env = thermal.read_environment_workbook(
+    "environment.xlsx",
+    column_map={"DateTime": "timestamp", "AirTemp": "ambient_c", "CO2": "co2_ppm"})
+aligned = thermal.align_environment_to_frames(
+    frame_timestamps, env, ["ambient_c", "co2_ppm"],
+    max_gap_sec=600.0, timezone="UTC")        # out-of-range -> NaN + qc_flag
+
+# stress: before/after contrast around an event, with block-bootstrap CI +
+# covariate-adjusted HAC regression and a dark-phase internal negative control
+result = thermal.analyze_stress_response(
+    timeseries_df, event_time, metric="canopy_temp_c",
+    phase_column="phase", lit_value="light", random_seed=42)
+```
+
+SAM 2 temporal thermal segmentation (`ThermalVideoSegmenter` /
+`segment_video_with_sam2`) needs `pip install "phenocv[video]"` plus a SAM 2
+checkpoint; `thermal_feature_image` is fed to SAM 2 as the 3-channel input (not
+a pseudo-color frame), and cleanup is target-anchored so an engulfed pot is
+never published (fail-closed).
 
 ## 🗺️ Roadmap
 
