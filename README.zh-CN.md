@@ -1,4 +1,7 @@
+> 📖 English documentation: [README.md](./README.md)
+
 # PhenoCV
+
 
 > 可组合、多模态的**植物表型**工具箱 —— 各模块共享同一个 `phenocv.core`；
 > [SAM 2](https://github.com/facebookresearch/sam2) 只是一种*可选的*分割后端，并非
@@ -9,6 +12,11 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 [![Tests](https://github.com/perseus-wy/PhenoCV/actions/workflows/ci.yml/badge.svg)](https://github.com/perseus-wy/PhenoCV/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/docs-GitHub-blue.svg)](./docs/)
+
+
+
+
+
 
 PhenoCV 不是单个算法，而是一套**可组合、可插拔**的植物表型视觉模块。当前已提供三个，地位平等：
 
@@ -28,13 +36,21 @@ PhenoCV 不是单个算法，而是一套**可组合、可插拔**的植物表�
 三个模块都构建在共享的 **`phenocv.core`**（表型提取器注册表 + 模态/适配器注册表 + IO 工具）
 之上；因此新增模块（例如 `phenocv.counting`）只需「写一个包、注册你的工具」——核心无需改动。
 
+> **🖼️ About the figures.** Every image in this README is **desensitized**: the
+> first two are rendered from a fully synthetic demo (no real field data); the
+> thermal figures are method illustrations with calibration boards and labels
+> removed. They illustrate the *method*, not any specific experiment or genotype.
+
 > **🖼️ 关于图中的图像。** 本 README 中的每一张图都经过**脱敏**：前两张来自
 > 完全合成的样本（无真实田间数据）；热红外图为方法示意，已移除标定板与标签。
 > 它们只用于说明*方法*，不代表任何具体实验或基因型。
 
 ---
 
-## 🌟 为什么是 PhenoCV
+## 🌟 Why PhenoCV
+
+
+
 
 - **可组合，非单体**：分割模块、表型引擎、热红外模块，可单独或任意组合使用，各自独立、可单独导入。
 - **失败即留痕、可审计**：每个表型行都记录 `pred_source` / `_inputs` / `_extractors_run`，
@@ -46,11 +62,14 @@ PhenoCV 不是单个算法，而是一套**可组合、可插拔**的植物表�
   CI 与贡献者都不需要 GPU。
 - **分割后端无关**：SAM 2 是默认而非必须；`BaseSegmenter` 契约允许 Classical 与 YOLO 后端即插即换。
 
-  ![ROI 裁剪把小幼苗的有效分辨率提升约 10×（合成示例）](docs/assets/fig2_roi_crop_benefit.png)
+![ROI cropping lifts a small seedling's effective resolution ~10× (synthetic demo)](docs/assets/fig2_roi_crop_benefit.png)
 
 ---
 
-## ✨ 模块
+## ✨ Modules
+
+
+
 
 | 模块 | 能力 |
 |---|---|
@@ -59,11 +78,19 @@ PhenoCV 不是单个算法，而是一套**可组合、可插拔**的植物表�
 | `phenocv.thermal` | 纯 CPU 热红外表型：温度表型（`temp_*` 列名）、按相对高度划分的上/中/下层冠层温度、冠层相对环境 ΔT、环境传感器对齐（禁止外推、缺口防护）、前后对照胁迫分析（移动块 bootstrap CI + HAC + 光暗对照）；可选的 SAM 2 分割层 |
 | `phenocv.core` | 所有模块共享的表型提取器**注册表**（`@register`）+ 模态/适配器**注册表** + 极简 IO 工具（掩膜 / RGB / 深度 / 多光谱 / 热红外读取器） |
 
-![四级表型引擎：从单张掩膜（+ 可选 RGB / 深度 / 多光谱）到一张扁平表型表](docs/assets/fig3_four_tiers.png)
+![The 4-tier phenotype engine: from a single mask (+ optional RGB / depth / multispectral) to a flat trait table](docs/assets/fig3_four_tiers.png)
+
+See [Roadmap](#-roadmap) for what is planned next.
 
 ---
 
-## 💿 安装
+## 💿 Installation
+
+
+
+
+
+
 
 ```bash
 # 核心（仅 CPU，引擎/适配器/测试均不需要 torch）
@@ -81,7 +108,32 @@ pip install "phenocv[video]"
 > 其余部分 —— 适配器、配置、表型引擎、热红外栈、CPU 单元测试 —— 都不需要它。其它分割后端
 > （Classical / YOLO）正以同一 `BaseSegmenter` 契约加入，无需 SAM 2。
 
-## 🚀 快速开始
+---
+
+## 🚀 Quickstart
+
+
+
+
+
+
+
+
+![Temporal propagation: a few sparse anchors expand to a fully segmented sequence (synthetic demo)](docs/assets/fig1_temporal_propagation.png)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 PhenoCV 的三个模块相互独立 —— 按需使用其中任何一个。
 
@@ -105,8 +157,6 @@ phenocv segment \
   --output results/demo \
   --device cuda
 ```
-
-![时序传播：少量稀疏锚帧扩展为完整分割序列（合成示例）](docs/assets/fig1_temporal_propagation.png)
 
 结果落在 `results/demo/`（见 [输出与 QA](#-输出与-qa)）。
 
@@ -164,7 +214,12 @@ python -c "import phenocv; print(phenocv.list_modules())"
 
 ---
 
-## 🧩 适配器契约
+## 🧩 Adapter Contract
+
+
+
+
+
 
 引擎消费 `PlantSequence` 对象。默认的 `CsvManifestAdapter` 读取**单个 manifest**，
 无需任何数据集代码：
@@ -183,7 +238,14 @@ python -c "import phenocv; print(phenocv.list_modules())"
 自定义适配器见 [docs/adapter_guide.md](./docs/adapter_guide.md)。同一套适配器思路由
 `phenocv.core` 的**模态/适配器注册表**统一抽象，任何模块都能声明如何接入新数据源。
 
-## 🔧 预设
+---
+
+## 🔧 Presets
+
+
+
+
+
 
 预设位于 `configs/default.yaml` 的 `presets:` 块，用 `--preset <名称>`（或
 `load_config(path, preset=...)`）应用。
@@ -198,7 +260,13 @@ python -c "import phenocv; print(phenocv.list_modules())"
 
 ---
 
-## 🏗️ 架构
+## 🏗️ Architecture
+
+
+
+
+
+
 
 ```
 phenocv/
@@ -237,7 +305,17 @@ phenocv/
 表型引擎从不硬编码某个表型 —— 它只运行已注册的工具。正是这种分离让 PhenoCV
 可复用、可组合。
 
-## 📊 输出与 QA
+---
+
+## 📊 Outputs & QA
+
+
+
+
+
+
+![无需额外标注的 QA：溯源（`pred_source`）分布与留一法（LOO）IoU](docs/assets/fig5_qa_provenance.png)
+
 
 `phenocv segment` 在 `--output` 下写入：
 
@@ -264,18 +342,13 @@ phenocv/
 | `point_rescue` | 阶梯后仍为空，用带框约束的点救援 |
 | `failed_empty` | 所有兜底后仍无掩膜 |
 
-![无需额外标注的 QA：溯源（`pred_source`）分布与留一法（LOO）IoU](docs/assets/fig5_qa_provenance.png)
 
-## 🌡️ 热红外（FLIR）表型
+---
 
-`phenocv.thermal` 是一个**纯 CPU** 的热红外（红外）表型模块：它把真实的
-温度矩阵（`°C`）+ 冠层掩膜，算成一张扁平的温度表型表，并可把环境传感器对齐到
-帧时刻、分析前后对照的胁迫/复水响应。其设计契约与表型引擎一致 —— **失败即留痕**
-（缺失/不可观测/空 → `NaN` + `missing_reason`，绝不编造）且**数据无关**（路径与列
-映射由调用方提供）。核心（`io` / `traits` / `environment` / `stress`）**无需 GPU、无需
-torch** 即可导入运行；只有可选的 `segmentation` 子层才懒加载 `torch`/`sam2`。
+## 🌡️ Thermal (FLIR) phenotyping
 
-> **纯 Python 接口：** 热红外模块尚未接入 `phenocv` CLI —— 请用 Python 调用。
+
+
 
 ![热红外场景：植株冠层上的真实温度矩阵。](docs/assets/fig_thermal_scene.png)
 
@@ -286,6 +359,27 @@ torch** 即可导入运行；只有可选的 `segmentation` 子层才懒加载 `
 ![环境传感器对齐到帧时刻（禁止外推、缺口防护）。](docs/assets/fig_thermal_envalign.png)
 
 ![复水事件前后的胁迫响应（移动块 bootstrap CI + HAC）。](docs/assets/fig_thermal_stress.png)
+
+
+
+
+
+
+
+
+`phenocv.thermal` 是一个**纯 CPU** 的热红外（红外）表型模块：它把真实的
+温度矩阵（`°C`）+ 冠层掩膜，算成一张扁平的温度表型表，并可把环境传感器对齐到
+帧时刻、分析前后对照的胁迫/复水响应。其设计契约与表型引擎一致 —— **失败即留痕**
+（缺失/不可观测/空 → `NaN` + `missing_reason`，绝不编造）且**数据无关**（路径与列
+映射由调用方提供）。核心（`io` / `traits` / `environment` / `stress`）**无需 GPU、无需
+torch** 即可导入运行；只有可选的 `segmentation` 子层才懒加载 `torch`/`sam2`。
+
+> **纯 Python 接口：** 热红外模块尚未接入 `phenocv` CLI —— 请用 Python 调用。
+
+
+
+
+
 
 ```python
 import numpy as np
@@ -320,7 +414,23 @@ SAM 2 时序热红外分割（`ThermalVideoSegmenter` / `segment_video_with_sam2
 `pip install "phenocv[video]"` 加 SAM 2 权重；`thermal_feature_image` 作为 3 通道输入
 喂给 SAM 2（而非伪彩色帧），清理以目标锚定为锚，确保吞并的盆体绝不被发布（fail-closed）。
 
-## 🗺️ 路线图
+---
+
+## 🗺️ Roadmap
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 PhenoCV 是一个围绕**植物表型研究热点**持续生长的模块箱。下列每一项都是计划 / 欢迎贡献的
 `phenocv/` 同级模块，并把自己的工具注册到 `phenocv.core.registry`。已有的路线图构想已归入相应分组。
@@ -361,7 +471,12 @@ CPU/ONNX/TFLite 路径，使模块可在边缘相机与田间笔记本上无 GPU
 ![群体曲线：全部 44 株的「仅掩膜」冠层面积 / 纵向范围（真实、脱敏裁剪）——
 一次统一调用即可从单帧幼苗扩展到整批群体](docs/assets/fig4_population_curves.png)
 
-## 📚 文档
+---
+
+## 📚 Documentation
+
+
+
 
 - [docs/tuning.md](./docs/tuning.md) —— 每个分割旋钮，以及*为什么*默认值是这样
 - [docs/export_formats.md](./docs/export_formats.md) —— 掩膜 / ISAT / CSV / QA 布局
@@ -369,12 +484,22 @@ CPU/ONNX/TFLite 路径，使模块可在边缘相机与田间笔记本上无 GPU
 - [SKILL.md](./SKILL.md) —— 智能体技能（WorkBuddy / Claude Code / Codex）
 - [skills/phenocv-phenotype-port/](./skills/phenocv-phenotype-port/) —— 把一个表型流水线移植进 PhenoCV 的 WorkBuddy 技能
 
-## 🤝 贡献
+---
+
+## 🤝 Contributing
+
+
+
 
 见 [CONTRIBUTING.md](./CONTRIBUTING.md) 与 [docs/extending.md](./docs/extending.md)。
 CPU 环境即可开发，跑 `pytest`，开 PR。
 
-## 📜 引用
+---
+
+## 📜 Citation
+
+
+
 
 ```bibtex
 @software{phenocv2026,
@@ -386,6 +511,11 @@ CPU 环境即可开发，跑 `pytest`，开 PR。
 }
 ```
 
-## 📄 许可证
+---
+
+## 📄 License
+
+
+
 
 [MIT](./LICENSE) © 2026 perseus-wy.
