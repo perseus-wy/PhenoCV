@@ -1,17 +1,19 @@
 ---
 name: phenocv
 description: >-
-  PhenoCV — composable open-source computer-vision toolkit for plant
-  phenotyping. Modules: (1) `phenocv.segmentation` — temporal canopy
-  segmentation via SAM 2 video propagation from sparse manual keyframes; (2)
-  `  phenocv.phenotypes` — a pluggable, fail-closed **phenotype computation**
-  engine that derives 2D shape, RGB-vegetation, 3D-canopy-height, and
-  multispectral traits from a mask (+ optional RGB / depth+calibration /
-  multispectral inputs); (3) `phenocv.thermal` — a pure-CPU **thermal (FLIR)
-  phenotyping** module: per-pixel temperature traits, canopy-layer partitioning
-  by relative height, environment-sensor time alignment, and before/after
-  stress/rewatering analysis with block-bootstrap & HAC uncertainty; all three
-  build on `phenocv.core` (shared registry + IO).
+  PhenoCV — a composable, open-source computer-vision toolkit for plant
+  phenotyping. Modules share one `phenocv.core` (registry + IO); segmentation is
+  one of several modules, and SAM 2 is one of several pluggable segmentation
+  backends (Classical / YOLO are designed as drop-ins). Shipped modules:
+  (1) `phenocv.segmentation` — temporal canopy segmentation with pluggable
+  backends (SAM 2 by default); (2) `phenocv.phenotypes` — a pluggable,
+  fail-closed **phenotype computation** engine (2D shape, RGB-vegetation,
+  3D-canopy-height, multispectral traits) from a mask (+ optional RGB /
+  depth+calibration / multispectral inputs); (3) `phenocv.thermal` — a pure-CPU
+  **thermal (FLIR) phenotyping** module (per-pixel temperature traits,
+  canopy-layer partitioning, environment-sensor alignment, before/after
+  stress/rewatering analysis with block-bootstrap & HAC uncertainty). Build new
+  modules by writing a package and registering tools with `phenocv.core.registry`.
   Use when a user wants to (a) segment a plant/object time-series from a few
   labeled frames, (b) build a phenotyping mask dataset, (c) write a data
   adapter for a new dataset format, (d) tune ROI / threshold / rescue
@@ -20,28 +22,29 @@ description: >-
   (FLIR) traits from a temperature matrix + mask, align environment sensors onto
   frame timestamps, or analyse before/after stress/rewatering responses, or
   (g) extend PhenoCV with a new module/tool.
-  PhenoCV —— 可组合的开源植物表型计算机视觉工具箱。模块：① `phenocv.segmentation`
-  —— 基于 SAM 2 视频传播的时序冠层分割；② `phenocv.phenotypes` —— 可插拔、
-  fail-closed 的**表型计算**引擎；③ `phenocv.thermal` —— 纯 CPU 的**热红外（FLIR）
-  表型**模块：逐像素温度表型、按相对高度的分层、环境传感器时序对齐、前后对照的
-  胁迫/复水分析（移动块 bootstrap + HAC 不确定性）。三者都构建在 `phenocv.core`
-  （共享注册表+IO）之上。当用户需要（a）用少量标注帧分割植物/物体时序，（b）构建
-  表型掩膜数据集，（c）为新数据集格式编写适配器，（d）调整 ROI / 阈值 / 救援参数，
-  （e）基于已有掩膜计算表型（冠层面积、植被指数、株高、多光谱指数），（f）基于温度
-  矩阵+掩膜计算热红外表型、把环境传感器对齐到帧时刻、或分析前后对照的胁迫/复水响应，
-  或（g）为 PhenoCV 扩展新模块/工具时使用。
+  PhenoCV —— 可组合的开源植物表型计算机视觉工具箱。各模块共享 `phenocv.core`（注册表+IO）；
+  分割只是多个模块之一，SAM 2 只是多个可插拔分割后端之一（Classical / YOLO 设计为即插即换）。
+  已发布模块：① `phenocv.segmentation` —— 时序冠层分割，可插拔后端（默认 SAM 2）；②
+  `phenocv.phenotypes` —— 可插拔、fail-closed 的**表型计算**引擎（2D 形状、RGB 植被指数、
+  3D 株高、多光谱指数）；③ `phenocv.thermal` —— 纯 CPU 的**热红外（FLIR）表型**模块：
+  逐像素温度表型、按相对高度的分层、环境传感器时序对齐、前后对照的胁迫/复水分析
+  （移动块 bootstrap + HAC 不确定性）。新增模块只需写包并把工具注册到 `phenocv.core.registry`。
+  当用户需要（a）用少量标注帧分割植物/物体时序，（b）构建表型掩膜数据集，（c）为新数据集格式
+  编写适配器，（d）调整 ROI / 阈值 / 救援参数，（e）基于已有掩膜计算表型（冠层面积、植被指数、
+  株高、多光谱指数），（f）基于温度矩阵+掩膜计算热红外表型、把环境传感器对齐到帧时刻、或分析
+  前后对照的胁迫/复水响应，或（g）为 PhenoCV 扩展新模块/工具时使用。
 ---
 
 # PhenoCV Skill
 
 > Composable open-source computer-vision toolkit for plant phenotyping. Three
-> modules ship today — `phenocv.segmentation` (SAM 2 temporal canopy
-> segmentation), `phenocv.phenotypes` (a 4-tier, fail-closed trait engine), and
-> `phenocv.thermal` (a pure-CPU thermal / FLIR phenotyping module) — all on a
-> shared `phenocv.core`. 可组合的开源植物表型计算机视觉工具箱：当前含
-> `phenocv.segmentation`（SAM 2 时序分割）、`phenocv.phenotypes`（四级
-> fail-closed 表型引擎）与 `phenocv.thermal`（纯 CPU 热红外表型模块），共享
-> `phenocv.core`。
+> modules ship today — `phenocv.segmentation` (temporal canopy segmentation; SAM 2
+> is the default *one* of several pluggable backends), `phenocv.phenotypes` (a
+> 4-tier, fail-closed trait engine), and `phenocv.thermal` (a pure-CPU thermal /
+> FLIR phenotyping module) — all on a shared `phenocv.core`.
+> 可组合的开源植物表型计算机视觉工具箱：当前含 `phenocv.segmentation`（时序冠层分割；
+> SAM 2 只是多个可插拔后端中的默认项）、`phenocv.phenotypes`（四级 fail-closed 表型引擎）
+> 与 `phenocv.thermal`（纯 CPU 热红外表型模块），共享 `phenocv.core`。
 
 ## When to use / 何时触发
 
@@ -487,6 +490,25 @@ summary = ThermalVideoSegmenter(
 # components without identity-support are dropped, so an engulfed pot is never
 # published (fail-closed: a QC failure raises and writes segment_failed_qc.json).
 ```
+
+## Extension points / 扩展点
+
+PhenoCV is built to be extended without forking:
+
+- **`phenocv.core.registry`** — the `TraitExtractor` registry (`@register` +
+  `available_for`). Any module registers its tools here; they become visible to
+  `phenocv.list_modules()` / the CLI automatically.
+- **Modality / adapter registry** (in `core/registry.py`) — declare how a module
+  ingests a new data source; the CSV/JSON adapter is one implementation.
+- **`segmentation/base.py BaseSegmenter`** — a backend-agnostic contract. SAM 2
+  is the shipped backend; **Classical** and **YOLO** backends are designed as
+  drop-in alternatives behind the same interface, so swapping backends never
+  touches the engine or the adapters.
+
+PhenoCV 被设计为可无损扩展：`phenocv.core.registry` 是 `TraitExtractor` 注册表
+（`@register` + `available_for`），任何模块在此注册即可被自动发现；模态/适配器注册表
+声明如何接入新数据源；`segmentation/base.py BaseSegmenter` 是后端无关的契约，SAM 2 是已发布
+后端，Classical 与 YOLO 后端可即插即换，切换后端无需改动引擎或适配器。
 
 ## References / 参考
 

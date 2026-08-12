@@ -19,7 +19,7 @@ import numpy as np
 from . import __version__
 from .segmentation.config import load_config
 from .segmentation.adapters import CsvManifestAdapter, PlantPhenotypingAdapter
-from .segmentation.engine import run_sam2_video_temporal
+from .segmentation.base import run_segmentation
 from . import phenotypes as P
 from .phenotypes.calib import CameraIntrinsics, load_rgb_intrinsics
 from .core.io import (
@@ -48,10 +48,13 @@ def cmd_segment(args) -> int:
               file=sys.stderr)
         return 2
 
-    result = run_sam2_video_temporal(
+    # Backend selection: explicit --backend overrides the YAML `backend:` key,
+    # which in turn overrides the "sam2" default (see run_segmentation).
+    result = run_segmentation(
         sequences, args.output, args.checkpoint,
-        model_cfg=args.model_cfg, device=args.device,
-        config=cfg, do_loo=not args.no_loo, export_isat=not args.no_isat,
+        backend=args.backend,
+        model_cfg=args.model_cfg, device=args.device, config=cfg,
+        do_loo=not args.no_loo, export_isat=not args.no_isat,
         export_qa=not args.no_qa, resume=not args.no_resume,
         image_size=tuple(args.image_size),
     )
@@ -141,6 +144,9 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     p = sub.add_parser("segment", help="propagate keyframe masks to full sequences")
     common(p)
+    p.add_argument("--backend", default=None,
+                   choices=["sam2", "classical", "yolo"],
+                   help="segmentation algorithm backend (overrides config backend:)")
     p.add_argument("--adapter", choices=["csv", "plant"], default="csv")
     p.add_argument("--manifest", help="manifest CSV/JSON (csv adapter)")
     p.add_argument("--index", help="frame-index CSV (plant adapter)")

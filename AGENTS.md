@@ -5,7 +5,8 @@ phenotyping** — a set of independent, pluggable modules that share one
 `phenocv.core`. Three modules ship today:
 (1) **`phenocv.segmentation`** — temporal canopy segmentation: a few manually
 labeled keyframes of a plant/object sequence are propagated to a fully
-segmented time series with SAM 2 video propagation;
+segmented time series (SAM 2 is the default, optional, pluggable backend;
+Classical / YOLO backends are drop-in alternatives);
 (2) **`phenocv.phenotypes`** — a pluggable, fail-closed trait engine that
 derives 2D shape / RGB vegetation / 3D canopy height / multispectral traits
 from a mask (+ optional richer inputs);
@@ -18,9 +19,9 @@ testable without a GPU** (`numpy` + `cv2` + `pandas` + `scipy` + `statsmodels`,
 lazy; `torch`/`sam2` only inside the optional segmentation layer).
 
 > **中文定位：** PhenoCV 是一个可组合的开源植物表型计算机视觉工具箱，由共享 `phenocv.core`
-> 的独立模块构成。已发布 `phenocv.segmentation`（SAM 2 时序分割）、`phenocv.phenotypes`
-> （四级 fail-closed 表型引擎）与 `phenocv.thermal`（纯 CPU 热红外表型模块）。完整中英双语说明见
-> [`SKILL.md`](./SKILL.md)。
+> 的独立模块构成。`phenocv.segmentation`（时序冠层分割；SAM 2 为默认的可选后端）、
+> `phenocv.phenotypes`（四级 fail-closed 表型引擎）与 `phenocv.thermal`（纯 CPU 热红外表型模块）
+> 三者地位平等。完整中英双语说明见 [`SKILL.md`](./SKILL.md)。
 
 **Agent skill:** see [`SKILL.md`](./SKILL.md) for the full trigger conditions,
 concepts, CLI/API usage, adapter contract, presets, phenotyping tiers, and QA

@@ -7,9 +7,10 @@ phenotyping** — a set of independent, pluggable modules that share one
 `phenocv.core`.
 
 当前已发布三个模块 (Three modules ship today):
-- **`phenocv.segmentation`** —— 基于 SAM 2 视频传播的时序冠层分割：用少量人工标注的
-  关键帧，得到完整时序的分割掩膜。 / temporal canopy segmentation via SAM 2 video
-  propagation from sparse manual keyframes.
+- **`phenocv.segmentation`** —— 时序冠层分割（SAM 2 是默认的可选后端，Classical / YOLO 为可插拔替代）：
+  用少量人工标注的关键帧，得到完整时序的分割掩膜。 / temporal canopy segmentation (SAM 2 is the
+  default, optional, pluggable backend; Classical / YOLO are drop-in alternatives) from sparse
+  manual keyframes.
 - **`phenocv.phenotypes`** —— 可插拔、失败即留痕（fail-closed）的**四级表型引擎**
   （2D 形状 / RGB 植被指数 / 3D 株高 / 多光谱指数）：从一张掩膜（+ 可选 RGB / 深度+标定 /
   多光谱）算出一张扁平表型表。 / a pluggable, fail-closed 4-tier trait engine.

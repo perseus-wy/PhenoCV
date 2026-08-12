@@ -21,9 +21,15 @@ from .engine import (
 from .adapters import (
     BaseAdapter, CsvManifestAdapter, PlantPhenotypingAdapter,
 )
+from .base import (
+    BaseSegmenter, SAM2Segmenter, ClassicalSegmenter, YOLOSegmenter,
+    build_segmenter, run_segmentation,
+)
 
 __all__ = [
     "load_config",
     "PlantSequence", "TemporalPropagationConfig", "run_sam2_video_temporal",
     "BaseAdapter", "CsvManifestAdapter", "PlantPhenotypingAdapter",
+    "BaseSegmenter", "SAM2Segmenter", "ClassicalSegmenter", "YOLOSegmenter",
+    "build_segmenter", "run_segmentation",
 ]

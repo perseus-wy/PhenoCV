@@ -126,6 +126,12 @@ class TemporalPropagationConfig:
     qa_grid_cols: int = 6
     qa_grid_tile: int = 200
 
+    # -- Backend selection --
+    backend: str = "sam2"
+    """Segmentation backend identifier (``"sam2"`` default). Forwarded to the
+    backend factory so a single config selects the algorithm; ``"sam2"`` keeps
+    the historical behavior."""
+
     @classmethod
     def from_mapping(cls, data: Optional[Dict[str, Any]]) -> "TemporalPropagationConfig":
         """Build from a YAML/dict, ignoring unknown keys (forward-compatible)."""

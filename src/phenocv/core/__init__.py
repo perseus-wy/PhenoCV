@@ -15,10 +15,16 @@ from .registry import (
 from .io import (
     read_gray_mask, read_rgb, read_depth_mm, read_ms_band, first_match,
 )
+from .modalities import (
+    ModalityReader, register_modality, get_modality, all_modalities,
+    available_modalities,
+)
 
 __all__ = [
     "TraitExtractor",
     "INPUT_MASK", "INPUT_RGB", "INPUT_DEPTH", "INPUT_CALIB", "INPUT_MULTISPECTRAL",
     "register", "get_extractor", "all_extractors", "available_for", "clear_registry",
     "read_gray_mask", "read_rgb", "read_depth_mm", "read_ms_band", "first_match",
+    "ModalityReader", "register_modality", "get_modality", "all_modalities",
+    "available_modalities",
 ]
