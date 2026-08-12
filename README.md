@@ -127,14 +127,16 @@ pip install "phenocv[video]"
 
 PhenoCV's three modules are independent — run whichever you need.
 
-### 1. Generate the synthetic demo (no real data, CPU-only)
+### 1. Generate the synthetic RGB demo (thermal sample is committed)
 
 ```bash
 python tools/make_demo_sample.py --out samples/demo
 ```
 
 This writes `samples/demo/{frames,masks,manifest.csv}` — a green disc that
-grows over 6 frames with 3 sparse anchors.
+grows over 6 frames with 3 sparse anchors. The thermal demo
+(`samples/demo/thermal/`) contains committed real FLIR data and requires
+no generation — see [Thermal phenotyping](#-thermal-flir-phenotyping).
 
 ### 2. Segmentation (one of several module entry points)
 
@@ -386,10 +388,7 @@ supplies paths & column maps). The core (`io` / `traits` / `environment` /
 `stress`) imports and runs with **no GPU and no torch**; only the optional
 `segmentation` sub-layer lazy-imports `torch`/`sam2`.
 
-> **Python-API only:** thermal is not yet wired into the `phenocv` CLI — call it
-> from Python.
-
-![A FLIR scene: the true-temperature matrix over a plant canopy.](docs/assets/fig_thermal_scene.png)
+![Real FLIR scene: the true-temperature matrix over a plant canopy.](docs/assets/fig_thermal_scene.png)
 
 ![Temperature overlay on the canopy mask (cv2-only render, fixed scale).](docs/assets/fig_thermal_overlay.png)
 

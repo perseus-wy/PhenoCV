@@ -5,40 +5,40 @@
 aligns an environment time-series onto FLIR frame timestamps, and runs
 before/after stress / rewatering analysis with block-bootstrap and HAC
 uncertainty. Every renderer uses **cv2 only** (no matplotlib), so the whole
-module is importable and testable on a CPU-only host. This tutorial embeds the
-five synthetic figures under `docs/assets/` and shows runnable snippets.
+module is importable and testable on a CPU-only host. This tutorial embeds
+five real-data figures under `docs/assets/` and shows runnable snippets.
 
-**中文。** `phenocv.thermal` 是一个纯 CPU 的热红外模块：它把二维温度矩阵（°C）与冠层掩膜转换为稳健的温度表型，把环境时序对齐到 FLIR 帧时刻，并做前后胁迫/复水分析（移动块 bootstrap 与 HAC 不确定性）。所有渲染器**仅用 cv2**（不依赖 matplotlib），因而可在纯 CPU 主机上导入与测试。本教程嵌入 `docs/assets/` 下的五张合成示意图，并给出可运行代码片段。
+**中文。** `phenocv.thermal` 是一个纯 CPU 的热红外模块：它把二维温度矩阵（°C）与冠层掩膜转换为稳健的温度表型，把环境时序对齐到 FLIR 帧时刻，并做前后胁迫/复水分析（移动块 bootstrap 与 HAC 不确定性）。所有渲染器**仅用 cv2**（不依赖 matplotlib），因而可在纯 CPU 主机上导入与测试。本教程嵌入 `docs/assets/` 下的五张真实数据示意图，并给出可运行代码片段。
 
-> All figures and numeric examples below are **synthetic** (deterministic
-> `numpy`), and contain no real paths, serials, or private data.
-> 下文所有示意图与数值示例均为**合成数据**（确定性 `numpy` 生成），不含任何真实路径、序列号或私人数据。
+> Figures below are generated from real FLIR data included in the repo
+> (`samples/demo/thermal/`).
+> 下文展示的示意图均基于 repo 中包含的真实 FLIR 数据生成（`samples/demo/thermal/`）。
 
 ---
 
 ## 1. The thermal scene, the mask, and overlays — `io`
 
-![Synthetic thermal scene](docs/assets/fig_thermal_scene.png)
+![Real FLIR thermal scene](docs/assets/fig_thermal_scene.png)
 
 **English.** A thermal image is just a `float32 [H, W]` temperature matrix.
 `load_temperature` reads it from a `.npy`; `thermal_feature_image` combines
 absolute temperature / local ΔT / gradient into a 3-channel feature (a good
 GrabCut prompt for mask refinement); `polygons_to_mask` rasterises a canopy
 polygon; `make_overlay` renders temperature on a fixed scale with a mask
-contour. Reference data live under `samples/demo/thermal/`.
+contour. Real FLIR data lives under `samples/demo/thermal/`.
 
 **中文。** 一张热红外图像本质上就是一个 `float32 [H, W]` 温度矩阵。
 `load_temperature` 从 `.npy` 读取；`thermal_feature_image` 把绝对温度 / 局部
 温差 / 梯度组合成 3 通道特征（可作为掩膜精修的 GrabCut 提示）；
 `polygons_to_mask` 将冠层多边形栅格化；`make_overlay` 在固定温标上渲染温度并
-叠加掩膜轮廓。示例数据位于 `samples/demo/thermal/`。
+叠加掩膜轮廓。真实 FLIR 数据位于 `samples/demo/thermal/`。
 
 ```python
 import numpy as np
 import phenocv.thermal as T
 
-# --- Load the demo temperature matrix (float32 [H,W], °C) ---
-# 加载示例温度矩阵（float32 [H,W]，单位 °C）
+# --- Load the real temperature matrix (float64 [H,W], °C) ---
+# 加载真实温度矩阵（float64 [H,W]，单位 °C）
 temp = T.load_temperature("samples/demo/thermal/temperature_0000.npy")
 
 # --- Build a 3-channel thermal feature image (absolute / local ΔT / gradient) ---
@@ -150,9 +150,9 @@ aligned = T.align_environment_to_frames(
 print(aligned[["ambient_c", "qc_flag"]])
 ```
 
-*Synthetic figure: a diurnal ambient-temperature curve (blue) with red markers
+*Real-data figure: a diurnal ambient-temperature curve (blue) with red markers
 at the FLIR frame timestamps that were aligned onto it.
-合成图：日变化环境温度曲线（蓝）与对齐到其上的 FLIR 帧时刻红点标记。*
+真实数据图：日变化环境温度曲线（蓝）与对齐到其上的 FLIR 帧时刻红点标记。*
 
 ---
 
@@ -202,27 +202,39 @@ print(res["phase_contrast"])     # per-phase effect + bootstrap CI + p
 print(res["hac_adjusted"])       # regression post coefficient + HAC CI
 ```
 
-*Synthetic figure: paired bars of canopy ΔT before vs after an irrigation event,
+*Real-data figure: paired bars of canopy ΔT before vs after an irrigation event,
 with the negative delta annotated — recovered transpiration lowers ΔT.
-合成图：灌溉事件前后冠层 ΔT 的配对柱状图，标注负向差值——复水后蒸腾恢复使 ΔT 降低。*
+真实数据图：灌溉事件前后冠层 ΔT 的配对柱状图，标注负向差值——复水后蒸腾恢复使 ΔT 降低。*
 
 ---
 
 ## 5. Where the data comes from — `samples/demo/thermal/`
 
-**English.** `tools/make_demo_sample.py` generates a fully synthetic demo under
-`samples/demo/thermal/`: six `temperature_XXXX.npy` matrices, matching `masks/`
-PNGs, and an `environment.csv` (columns `timestamp, ambient_temp_c, vpd_kpa,
-co2_ppm`). Use it as a sandboxed, privacy-free starting point — every snippet
-above is reproducible against it.
+**English.** The thermal sample under `samples/demo/thermal/` consists of 6 REAL
+FLIR frames (`temperature_0000..0005.npy`, `float64` at 480×640) from a real
+soybean canopy experiment spanning a rewatering event at 2026-07-28 16:46 (soil
+moisture 18.5% → 59.3%). It also includes real SAM 2 canopy masks
+(`masks/0000..0005.png`) and a real environment sensor log (`environment.csv`
+with columns `timestamp, ambient_temp_c, ambient_rh_pct, co2_ppm,
+soil_moisture_pct, light_lux`). The figures above are generated from these
+committed data files — no generation script needed for the thermal sample.
 
-**中文.** `tools/make_demo_sample.py` 在 `samples/demo/thermal/` 下生成完全合成的
-示例：六个 `temperature_XXXX.npy` 矩阵、对应的 `masks/` PNG，以及
-`environment.csv`（列为 `timestamp, ambient_temp_c, vpd_kpa, co2_ppm`）。它可作为
-脱敏、无隐私的起点——上文所有片段都能在其上复现。
+**中文.** `samples/demo/thermal/` 下的热成像样本由 6 幅真实 FLIR 帧
+（`temperature_0000..0005.npy`，`float64`, 尺寸 480×640）组成，来源于一次真实
+大豆冠层试验，跨过一次发生于 2026-07-28 16:46 的复水事件（土壤水分 18.5% →
+59.3%）。同时包含真实的 SAM 2 冠层掩膜（`masks/0000..0005.png`）与真实环境传感
+器日志（`environment.csv`, 列包括 `timestamp, ambient_temp_c, ambient_rh_pct,
+co2_ppm, soil_moisture_pct, light_lux`）。以上示意图均由这些已提交的真实数据生成，
+热成像样本无需生成脚本。
 
 ```bash
+# This script generates ONLY the synthetic RGB/segmentation demo
+# (samples/demo/frames/, masks/, manifest.csv).
+# 该脚本仅生成合成 RGB/分割演示数据（samples/demo/frames/、masks/、manifest.csv）。
 python tools/make_demo_sample.py
+# The thermal sample (samples/demo/thermal/) is committed real data — no
+# generation needed.
+# 热成像样本（samples/demo/thermal/）为已提交的真实数据——无需生成。
 ```
 
 **Extension points.** To add a new thermal trait, subclass `TraitExtractor` from

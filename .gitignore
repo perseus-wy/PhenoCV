@@ -26,6 +26,13 @@ samples/demo/**/*.png
 samples/demo/**/*.npy
 samples/demo/**/*.csv
 
+# Thermal demo sample — real FLIR frames committed as public, de-identified demo data
+!samples/demo/
+!samples/demo/thermal/
+!samples/demo/thermal/temperature_*.npy
+!samples/demo/thermal/masks/*.png
+!samples/demo/thermal/environment.csv
+
 # ----- Model weights -----
 *.pt
 *.pth
