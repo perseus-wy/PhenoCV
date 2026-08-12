@@ -40,6 +40,12 @@ Design contract (shared with ``phenocv.phenotypes``)
 from __future__ import annotations
 
 from .config import ThermalConfig, load_thermal_config
+from .crop import (
+    PlantCropResult,
+    crop_plant_from_thermal,
+    resolve_colormap,
+    save_plant_crop,
+)
 from .io import (
     load_temperature,
     load_thermal_meta,
@@ -104,6 +110,11 @@ __all__ = [
     # config
     "ThermalConfig",
     "load_thermal_config",
+    # crop (plant-only isolation + tight bbox crop)
+    "PlantCropResult",
+    "crop_plant_from_thermal",
+    "resolve_colormap",
+    "save_plant_crop",
     # io
     "load_temperature",
     "load_thermal_meta",

@@ -65,6 +65,7 @@ from .io import (
     resolve_layer_overlap,
 )
 from .traits import partition_canopy_by_relative_height, summarize_masked_temperature
+from .crop import crop_plant_from_thermal, save_plant_crop
 
 
 logger = logging.getLogger(__name__)
@@ -113,6 +114,14 @@ class ThermalSegmentConfig:
     vmax: float = 30.0
     """Fixed temperature-scale upper bound (°C) for review overlays."""
     jpeg_quality: int = 95
+
+    # -- Plant-only thermal crop (opt-in output stage) --
+    crop_plant: bool = False
+    """When True, also emit plant-only temperature matrices + tight bbox crops."""
+    crop_pad_px: int = 0
+    """Padding (px) added around the tight plant bbox in the crop stage."""
+    crop_min_size: int = 0
+    """Minimum crop bbox side (px); small plants are grown to this size."""
 
     # -- SAM 2 propagation --
     offload_video_to_cpu: bool = True
@@ -1021,6 +1030,25 @@ class ThermalVideoSegmenter:
             save_mask(whole, masks_dir / "whole" / f"{stem}.png")
             for layer, lmask in resolved.items():
                 save_mask(lmask, masks_dir / layer / f"{stem}.png")
+
+            # Optional plant-only thermal crop (opt-in; fail-closed).
+            # Emits the background-NaN plant temperature matrix + a tight bbox
+            # crop, sharing the same vmin/vmax as the review overlay.
+            if self.cfg.crop_plant and area > 0:
+                crop_dir = output_dir / "crops"
+                crop_dir.mkdir(parents=True, exist_ok=True)
+                crop_res = crop_plant_from_thermal(
+                    temperature,
+                    whole,
+                    pad_px=self.cfg.crop_pad_px,
+                    min_size=self.cfg.crop_min_size,
+                    vmin=vmin,
+                    vmax=vmax,
+                )
+                if crop_res.ok:
+                    save_plant_crop(
+                        crop_res, crop_dir, stem, save_mask_png=True
+                    )
 
             # Review overlay.
             overlay = make_layer_overlay(temperature, resolved, vmin, vmax)

@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Command-line interface for the PhenoCV plant-phenotyping toolkit.
 
-Subcommands: ``segment`` (temporal canopy masks via SAM 2) and ``phenotype`` /
-``list-traits`` (the pluggable 4-tier trait engine).
+Subcommands: ``segment`` (temporal canopy masks via SAM 2), ``phenotype`` /
+``list-traits`` (the pluggable 4-tier trait engine), and ``thermal`` (plant-only
+FLIR cropping & analysis).
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ from .segmentation.adapters import CsvManifestAdapter, PlantPhenotypingAdapter
 from .segmentation.base import run_segmentation
 from . import phenotypes as P
 from .phenotypes.calib import CameraIntrinsics, load_rgb_intrinsics
+from .thermal.cli import register as register_thermal
 from .core.io import (
     read_gray_mask as _read_gray_mask,
     read_rgb as _read_rgb,
@@ -175,6 +177,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     lt = sub.add_parser("list-traits", help="list registered trait extractors")
     lt.add_argument("-v", "--verbose", action="store_true", help="show descriptions")
     lt.set_defaults(func=cmd_list_traits)
+
+    # --- thermal: plant-only FLIR cropping & analysis --------------------
+    register_thermal(sub)
 
     args = ap.parse_args(argv)
 
